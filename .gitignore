@@ -1,0 +1,137 @@
+############################################
+# ROOT
+############################################
+
+node_modules/
+.pnpm-store/
+.turbo/
+.cache/
+dist/
+build/
+coverage/
+
+*.log
+*.tmp
+*.swp
+*.swo
+
+############################################
+# ENV FILES (IMPORTANT)
+############################################
+
+.env
+.env.*
+!.env.example
+
+############################################
+# NEXT.JS / FRONTEND
+############################################
+
+.next/
+out/
+.vercel/
+*.tsbuildinfo
+
+# local dev artifacts
+apps/web/.next/
+apps/web/node_modules/
+
+############################################
+# PYTHON (WORKER + ORCHESTRATOR + API)
+############################################
+
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# virtual environments
+.venv/
+venv/
+env/
+
+# python packaging
+*.egg-info/
+dist/
+build/
+
+# pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# mypy / type checking
+.mypy_cache/
+
+############################################
+# SUPABASE
+############################################
+
+# local supabase
+.supabase/
+supabase/.temp/
+
+# generated types or artifacts
+supabase/.branches/
+supabase/.history/
+
+############################################
+# DOCKER
+############################################
+
+*.pid
+*.seed
+*.pid.lock
+
+############################################
+# DATABASE / VECTOR FILES (if any local)
+############################################
+
+*.sqlite
+*.db
+*.db-journal
+
+############################################
+# IDE / EDITOR
+############################################
+
+.vscode/
+.idea/
+*.iml
+
+############################################
+# OS FILES
+############################################
+
+.DS_Store
+Thumbs.db
+
+############################################
+# LOGS
+############################################
+
+logs/
+*.log
+
+############################################
+# TEST OUTPUTS
+############################################
+
+coverage/
+reports/
+
+############################################
+# BUILD ARTIFACTS (MONOREPO)
+############################################
+
+apps/**/dist/
+apps/**/build/
+services/**/dist/
+services/**/build/
+
+############################################
+# MISC
+############################################
+
+*.bak
+*.orig
