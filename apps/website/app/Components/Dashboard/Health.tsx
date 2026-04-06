@@ -12,16 +12,21 @@ const Health = () => {
     },
   };
 
-  const ProgressBar = ({ label, value }) => (
+  type ProgressBarProps = {
+    label: string;
+    value: number;
+  };
+
+  const ProgressBar = ({ label, value }:ProgressBarProps) => (
     <div className="mb-5">
       <div className="flex justify-between text-[11px] font-semibold text-slate-600 mb-1 tracking-wide">
         <span>{label}</span>
         <span>{value}%</span>
       </div>
 
-      <div className="w-full h-[6px] bg-slate-300 rounded-full">
+      <div className="w-full h-1.5 bg-slate-300 rounded-full">
         <div
-          className="h-[6px] bg-slate-600 rounded-full"
+          className="h-1.5 bg-slate-600 rounded-full"
           style={{ width: `${value}%` }}
         />
       </div>
@@ -29,9 +34,9 @@ const Health = () => {
   );
 
   return (
-    <div className="bg-[#c9d3df] rounded-[28px] p-6 flex items-center justify-between max-w-[720px]">
+    <div className="bg-[#c9d3df] rounded-[28px] p-6 flex items-center justify-between max-w-180">
       {/* LEFT */}
-      <div className="max-w-[380px]">
+      <div className="max-w-95">
         <h2 className="text-[28px] font-semibold text-slate-700 leading-tight mb-3">
           Workspace
           <br />
@@ -67,7 +72,7 @@ const Health = () => {
       </div>
 
       {/* RIGHT CARD */}
-      <div className="bg-[#dde3ea] rounded-[24px] px-5 py-6 w-[240px]">
+      <div className="bg-[#dde3ea] rounded-[24px] px-5 py-6 w-60">
         {/* header */}
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-slate-700 font-semibold text-sm">
