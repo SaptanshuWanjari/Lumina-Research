@@ -1,5 +1,4 @@
 import { LucideIcon } from "lucide-react";
-import { ReactNode } from "react";
 
 interface StatCardProps {
   icon: LucideIcon;
@@ -30,7 +29,7 @@ const StatCard = ({
         <p className="text-4xl font-bold text-slate-800 tracking-tight">
           {value}
         </p>
-        <p className="text-[10px] font-semibold tracking-widest text-slate-500 uppercase">
+        <p className="text-[12px] font-semibold tracking-widest text-slate-500 uppercase">
           {label}
         </p>
       </div>
