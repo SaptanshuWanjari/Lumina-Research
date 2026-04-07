@@ -1,59 +1,65 @@
-# AI Research & Decision Workspace Build Guide (Python + LangGraph + Supabase)
+# AI Research and Decision Workspace Build Guide
 
 ## Executive summary
 
-An **AI Research & Decision Workspace** is a portfolio-grade system that turns messy inputs (URLs, PDFs, notes) into a **reviewable decision report** with citations, drafts, approval gates, and a durable workflow history.
+This product is a **single-user AI Research and Decision Workspace** that turns messy inputs (URLs, PDFs, notes) into a **reviewable decision report** with citations, draft versions, approval gates, and durable workflow history.
 
-This revision keeps the original product goal intact, but changes the implementation foundation to:
+The implementation foundation is:
 
-- **Next.js App Router** for the UI and Backend-for-Frontend (BFF)
+- **Next.js App Router** for UI and Backend-for-Frontend (BFF)
 - **Python services** for ingestion, retrieval, and orchestration
 - **LangGraph (Python)** for stateful AI workflows
 - **Supabase Postgres** as the primary database
 - **Supabase Auth** for authentication, session handling, and OAuth
-- **pgvector on Supabase Postgres** for semantic retrieval
-- **Redis + BullMQ or Python workers** for background tasks, depending on how much polyglot complexity you want
-- **OpenTelemetry** for tracing across web, workers, and AI orchestration
+- **pgvector** in Supabase Postgres for semantic retrieval
+- **Python workers** for background processing
+- **OpenTelemetry** for tracing
 
-The key architectural shift is this:
+Core architectural rule:
 
-- Keep **Next.js** for the product surface and BFF
-- Move the **AI workflow layer** from TypeScript LangGraph to **Python LangGraph**
-- Replace standalone Postgres/Auth.js with **Supabase Postgres + Supabase Auth/OAuth**
-
-That gives you a cleaner split:
-
-- **Frontend/product experience:** Next.js
-- **Identity/data platform:** Supabase
-- **AI/runtime orchestration:** Python
-
-This is a stronger architecture than the original for an AI-heavy system, because Python has the best ergonomics for LangGraph, retrieval pipelines, evaluation tooling, document parsing, and experimentation, while Supabase removes a large amount of auth and database boilerplate.
+**Supabase stores state. Python computes. Next.js presents.**
 
 ---
 
 ## Why this revision
 
-The original draft leaned heavily on a TypeScript-everywhere stack. That is workable, but for this product the most important layer is the **stateful AI workflow**. For that layer, Python is usually the better long-term choice because:
+The previous draft mixed single-user app goals with team SaaS concepts (workspaces, memberships, invites, billing). The website implementation is intentionally single-user and local-first in product shape, so this PRD now matches that scope.
 
-- the Python LangGraph ecosystem is more mature in practice for agent workflows
-- most AI tooling, eval libraries, parsing libraries, and research utilities are Python-first
-- prompt iteration, graph debugging, and offline evaluation are easier in Python
-- background AI workflows and ingestion jobs are more natural to run in Python workers than inside a Node-centric application boundary
+This version removes:
 
-At the same time, the original stack made auth and core data management more complex than necessary. Supabase solves a lot of that immediately:
+- workspace switching
+- membership and RBAC tables for multiple users in one tenant
+- invite flows
+- billing/multi-tenant SaaS assumptions
 
-- managed Postgres
-- built-in auth
-- built-in OAuth providers
-- row-level security support
-- file storage if needed for uploads
-- realtime capabilities if later needed for run progress or collaboration
+This version keeps:
 
-So the revised stack is intentionally **hybrid**:
+- Supabase Auth for identity
+- durable case-source-run-report lifecycle
+- human-in-the-loop checkpointing in LangGraph
+- retrieval and citation traceability
 
-- **Next.js** where it shines: product UI, BFF, server-rendered app experience
-- **Supabase** where it shines: identity, Postgres, storage, policies
-- **Python** where it shines: AI workflow execution
+---
+
+## Product scope
+
+### In scope
+
+- Personal case management
+- Source ingestion (URL, file, note)
+- Chunking + embeddings + retrieval
+- Stateful runs with pause/resume checkpoints
+- Draft report generation and review
+- Publish flow and report version history
+- Search over sources/chunks/reports
+- Local single-user settings and integrations
+
+### Out of scope
+
+- Multi-user workspaces
+- Team permissions and role matrices
+- Invitations and member management
+- Billing and plan management
 
 ---
 
@@ -61,27 +67,23 @@ So the revised stack is intentionally **hybrid**:
 
 This PRD assumes:
 
-- You still want a **monorepo-style developer experience** even if services are split by language.
-- The user-facing app remains in **Next.js App Router**.
-- The main AI workflow runtime is implemented in **Python**, not TypeScript.
+- One authenticated user owns all records in their account.
+- The web app remains in **Next.js App Router**.
+- The AI workflow runtime is in **Python LangGraph**.
 - **Supabase Postgres** is the source of truth for application state.
-- **Supabase Auth** handles:
-  - email/password auth if enabled
-  - magic link if enabled
-  - OAuth providers such as Google/GitHub
-  - sessions and token issuance
-- The browser primarily talks to the **Next.js BFF**, not directly to internal Python services.
-- Python services may verify Supabase JWTs when called from the BFF.
-- Vector search is stored in the same **Supabase Postgres** instance using `pgvector`.
-- Background tasks are handled by workers, and long-running AI workflows are checkpointed in LangGraph.
+- **Supabase Auth** handles sign-in, OAuth, session issuance, and token refresh.
+- The browser primarily talks to Next.js BFF endpoints.
+- Python services can verify Supabase JWTs or use service credentials for internal trusted jobs.
+- Vector search lives in the same Postgres instance using `pgvector`.
+- Long-running workflows are checkpointed by LangGraph and persisted through run metadata.
 
 ---
 
-## Revised recommended tech stack
+## Recommended tech stack
 
 ### Product layer
 
-- **Next.js App Router**
+- Next.js App Router
 - Tailwind CSS
 - Server Components by default
 - Route Handlers for APIs/webhooks/SSE
@@ -89,267 +91,233 @@ This PRD assumes:
 
 ### Identity and data layer
 
-- **Supabase Postgres**
-- **Supabase Auth**
-- **Supabase OAuth**
-- **pgvector** extension in Postgres
-- Optional **Supabase Storage** for uploaded files and source artifacts
+- Supabase Postgres
+- Supabase Auth
+- Supabase OAuth (Google/GitHub first)
+- pgvector extension
+- Optional Supabase Storage for uploaded files and exports
 
 ### AI and workflow layer
 
-- **Python 3.11+**
-- **LangGraph (Python)**
-- **LangChain Python** where useful, but keep it thin
-- Pydantic for structured state and validation
-- Async Python worker runtime
+- Python 3.11+
+- LangGraph (Python)
+- Thin LangChain usage where helpful
+- Pydantic for state/contracts
+- Async worker runtime
 
 ### Background execution
 
-Two valid approaches:
+Preferred model:
 
-#### Option A: Simpler hybrid model
-- Next.js app enqueues jobs into Redis/BullMQ
-- Python workers consume jobs or are triggered by internal APIs
-
-#### Option B: Cleaner Python-first execution model
-- Next.js writes jobs/run requests into Supabase/Postgres
-- Python worker polls or consumes from a queue
-- Python owns ingestion + AI orchestration end to end
-
-For this product, **Option B is cleaner**. The original BullMQ direction is okay, but once your AI layer is Python, it is often better to let Python own the workflow lifecycle instead of bouncing orchestration across Node and Python.
+- Next.js writes job/run requests to Postgres
+- Python workers consume queued work
+- Python owns ingestion and orchestration lifecycle
 
 ---
 
-## Revised architecture
+## Architecture
 
 ### High-level architecture
 
-You will build four main layers:
-
 1. **Web App / BFF (Next.js)**
-   - authentication entry points using Supabase
-   - workspace and case management UI
-   - report review and approval UI
-   - BFF endpoints for browser-safe access to backend capabilities
+   - auth entry points
+   - case/source/run/report UI
+   - safe browser-facing APIs
 
 2. **Supabase Platform**
-   - Postgres relational data
-   - pgvector embeddings
-   - Auth and OAuth
-   - optional Storage buckets
-   - optional Realtime subscriptions
+   - relational state
+   - vector storage and search
+   - auth and oauth
+   - optional storage buckets
+   - optional realtime for run/source/report status updates
 
 3. **Python Worker Services**
-   - source ingestion
-   - parsing and chunking
-   - embeddings
-   - retrieval pipelines
-   - evaluation and validation tasks
+   - ingestion pipeline
+   - parsing/chunking/embeddings
+   - retries and error handling
 
 4. **LangGraph Orchestrator (Python)**
-   - durable research workflows
-   - checkpointed state
-   - human approval interrupts
-   - draft generation
-   - citation verification
+   - create and resume runs
+   - retrieval + synthesis + critique + citation checks
+   - pause for human review
    - publish transition
 
 ### Architectural principle
 
-The most important design decision is:
+**Every app row is owned by a single authenticated user (`owner_user_id`).**
 
-**Supabase stores state. Python computes. Next.js presents.**
-
-That keeps responsibilities crisp:
-
-- Next.js should not become the AI execution engine
-- Python should not become the user-facing product shell
-- Supabase should remain the durable system of record
+This keeps authorization simple today and remains RLS-ready for future enforcement.
 
 ---
 
-## Revised service breakdown
+## Service breakdown
 
-### 1. `apps/web` — Next.js application
-
-Responsibilities:
-
-- Sign-in / sign-up / OAuth callback flows
-- Workspace/project/case pages
-- Source submission UI
-- Review and publish UI
-- Route Handlers for internal APIs
-- SSE endpoints for progress streaming if desired
-
-### 2. `services/worker` — Python ingestion worker
+### `apps/website` — Next.js application
 
 Responsibilities:
 
-- fetch URLs
-- parse documents
-- extract text
-- normalize content
-- split into chunks
-- compute embeddings
-- write chunks + vectors to Supabase Postgres
+- sign-in/sign-up/oauth callback
+- case and source management UI
+- report review and publish UI
+- API handlers for browser-safe operations
 
-### 3. `services/orchestrator` — Python LangGraph service
+### `services/worker` — Python ingestion worker
 
 Responsibilities:
 
-- create and resume research runs
-- retrieve evidence
-- synthesize report drafts
+- fetch source content
+- parse and normalize text
+- chunk content
+- generate embeddings
+- write documents/chunks/state updates to Supabase
+
+### `services/orchestrator` — Python LangGraph service
+
+Responsibilities:
+
+- start/resume runs
+- retrieve evidence and synthesize report drafts
 - run critique and citation validation
-- pause for human review
-- resume after approval
-- publish outputs
+- persist run steps and artifacts
+- pause/resume for human checkpoints
+- publish report versions
 
-### 4. `supabase`
+### `supabase`
 
 Responsibilities:
 
-- users, memberships, workspaces
-- cases, sources, documents, chunks
-- AI runs, checkpoints metadata, report versions
-- auth, OAuth, tokens, policies
+- schema and migrations
+- extensions and indexes
+- optional RLS policies
 
 ---
 
-## Why Supabase is a better fit here
-
-The original doc treated database and authentication as separate concerns with more implementation burden. For this revised build, Supabase should handle both.
-
-### Supabase DB
-
-Use Supabase Postgres for:
-
-- `workspaces`
-- `workspace_members`
-- `projects`
-- `cases`
-- `sources`
-- `documents`
-- `chunks`
-- `ai_runs`
-- `report_versions`
-- `audit_logs`
-
-### Supabase Auth + OAuth
-
-Use Supabase Auth for:
-
-- email/password auth if you want it
-- passwordless magic links if you want them
-- OAuth sign-in with providers like Google or GitHub
-- session tokens for the web app
-- identity bootstrap for workspace membership
-
-This is much better than wiring a custom auth model early, because auth is rarely the core learning objective of this project. The core learning objective is reliable AI workflow construction.
-
-### Supabase Storage
-
-Use it when you need:
-
-- uploaded PDFs
-- raw source files
-- generated export artifacts
-- optional versioned attachments
-
-### Row-level security
-
-Supabase makes it natural to add RLS later for workspace isolation. Even if you start with application-level authorization checks, the data model should be designed so RLS can be introduced cleanly.
-
----
-
-## Revised data model
+## Data model (single-user)
 
 ### Core entities
 
-#### `workspaces`
-Represents a team or personal environment.
+#### `profiles`
 
-#### `workspace_members`
-Maps users to workspaces with roles such as:
-- owner
-- editor
-- reviewer
-- viewer
+Mirror metadata for authenticated users (linked to Supabase auth user id).
 
 #### `cases`
-A research or decision unit.
+
+Research unit.
 
 Suggested fields:
+
 - `id`
-- `workspace_id`
+- `owner_user_id`
 - `title`
 - `question`
-- `status` (`draft`, `ingesting`, `indexed`, `analyzing`, `review`, `published`, `failed`)
-- `created_by`
-- `created_at`
-- `updated_at`
+- `status` (`draft`, `ingesting`, `indexed`, `analyzing`, `review`, `published`, `failed`, `archived`)
+- `priority`
+- `tags`
+- `created_at`, `updated_at`, `archived_at`
 
 #### `sources`
-Represents URLs, uploaded files, or notes attached to a case.
+
+URL/file/note inputs for a case.
 
 Suggested fields:
+
 - `id`
 - `case_id`
+- `owner_user_id`
 - `source_type` (`url`, `file`, `note`)
 - `url`
 - `storage_path`
-- `status`
+- `note_text`
+- `status` (`pending`, `fetching`, `extracting`, `chunking`, `embedding`, `indexed`, `failed`, `archived`)
 - `error_message`
 - `content_hash`
-- `created_at`
+- `created_at`, `updated_at`
 
 #### `documents`
-Normalized extracted content from each source.
+
+Normalized extracted content derived from sources.
 
 #### `chunks`
-Retrievable text chunks with embeddings.
+
+Retrievable text chunks with vector embeddings.
 
 Suggested fields:
+
 - `id`
-- `case_id`
 - `document_id`
+- `case_id`
+- `owner_user_id`
 - `chunk_index`
 - `content`
 - `token_count`
-- `embedding`
+- `embedding` (pgvector)
 - `metadata_json`
 
-#### `ai_runs`
-Represents an execution of the research workflow.
+#### `runs`
+
+Execution instances of the LangGraph workflow.
 
 Suggested fields:
+
 - `id`
 - `case_id`
-- `status`
+- `owner_user_id`
+- `status` (`queued`, `running`, `needs_review`, `resuming`, `complete`, `failed`, `cancelled`)
 - `current_step`
-- `started_at`
-- `completed_at`
+- `needs_review`
+- `checkpoint_ref`, `checkpoint_at`
+- `started_at`, `completed_at`
 - `error_message`
-- `approved_by`
-- `approved_at`
+- `approved_by_user_id`, `approved_at`
+
+#### `run_steps`
+
+Node-level trace for each run.
+
+#### `run_artifacts`
+
+Structured outputs from run steps (retrieval sets, critique notes, validation, traces).
 
 #### `report_versions`
+
 Versioned report artifacts.
 
 Suggested fields:
+
 - `id`
 - `case_id`
-- `ai_run_id`
+- `run_id`
+- `owner_user_id`
 - `version_number`
-- `status` (`draft`, `published`)
+- `status` (`draft`, `published`, `archived`)
 - `content_markdown`
 - `citations_json`
-- `created_by`
+- `published_at`
 - `created_at`
+
+#### `report_claims`
+
+Structured claim units for explainability and citation linking.
+
+#### `report_citations`
+
+Citation records linking report evidence to source/document/chunk.
+
+#### `ingestion_attempts`
+
+Per-source retry history and per-stage outcomes.
+
+#### `jobs`
+
+Queue table for background work.
+
+#### `audit_logs`
+
+Audit trail for entity lifecycle and sensitive actions.
 
 ---
 
-## Revised end-to-end workflow
+## End-to-end workflow
 
 ### Lifecycle
 
@@ -362,39 +330,24 @@ A Case moves through:
 - **Review**
 - **Published**
 
-### Revised sequence
+### Sequence
 
 1. User creates a case in Next.js
-2. Next.js stores case metadata in Supabase Postgres
-3. User adds sources (URLs, files, notes)
+2. Next.js writes case metadata to Supabase
+3. User adds sources (URL/file/note)
 4. Python ingestion worker processes sources
-5. Chunks and embeddings are stored in Supabase Postgres
+5. Documents/chunks/embeddings are persisted
 6. User starts analysis
-7. Python LangGraph workflow runs with checkpoints
-8. Draft report is stored in `report_versions`
-9. Human reviews and approves
-10. Workflow resumes and publishes final version
+7. Python LangGraph run executes with checkpoints
+8. Draft report is saved into `report_versions`
+9. User reviews and approves
+10. Orchestrator resumes and publishes final version
 
 ---
 
-## Revised LangGraph design (Python)
+## LangGraph design (Python)
 
-This is the most important part of the rewrite.
-
-The original PRD described a TypeScript LangGraph layer. Replace that with a **Python LangGraph workflow service**.
-
-### Why Python LangGraph here
-
-Use Python LangGraph because the orchestration layer benefits from:
-
-- easier experimentation
-- easier document tooling integration
-- stronger ecosystem for evaluation and offline analysis
-- cleaner interop with Python-native retrieval and parsing libraries
-
-### Recommended graph nodes
-
-Define the graph roughly as:
+### Recommended nodes
 
 1. `plan_research`
 2. `retrieve_evidence`
@@ -406,9 +359,8 @@ Define the graph roughly as:
 
 ### State model
 
-Use a strongly typed state object, for example with Pydantic.
-
 Suggested state fields:
+
 - `run_id`
 - `case_id`
 - `question`
@@ -422,141 +374,73 @@ Suggested state fields:
 
 ### Interrupt model
 
-The graph should pause at `await_human_review`.
+The run pauses at `await_human_review`:
 
-The product flow should work like this:
-
-- Python graph writes a draft report and marks the run as `needs_review`
-- Next.js shows the draft in the review UI
-- Reviewer edits or approves
-- Next.js updates Supabase state
-- Python orchestrator resumes the graph
-- Publish node creates the final report version
-
-This is much better than building a manual state machine in the web tier.
+- graph marks run as `needs_review`
+- Next.js shows review UI
+- user edits/approves/rejects
+- orchestrator resumes from checkpoint
+- publish node persists final report version
 
 ---
 
-## Recommended repo structure
+## API boundaries
 
-A good revised layout would be:
-
-```text
-ai-research-workspace/
-  apps/
-    web/                    # Next.js App Router
-  services/
-    worker/                 # Python ingestion/indexing worker
-    orchestrator/           # Python LangGraph workflow service
-  packages/
-    shared-types/           # shared schemas/contracts (OpenAPI/JSON Schema)
-  supabase/
-    migrations/
-    seed/
-    policies/
-  infra/
-    docker/
-    otel/
-  docs/
-```
-
-### Why this layout is better than TS-only
-
-Because it reflects the real system boundary:
-
-- web app
-- compute services
-- database/auth platform
-
-That is more honest and easier to scale than forcing all concerns into a TypeScript monorepo just for language consistency.
-
----
-
-## API boundary design
-
-### Browser to Next.js
-
-The browser should mostly talk to Next.js only.
+### Browser -> Next.js
 
 Examples:
+
 - create case
 - add source
 - trigger run
 - approve report
-- fetch review state
+- fetch run/report state
 
-### Next.js to Supabase
+### Next.js -> Supabase
 
-Use Supabase client libraries in Next.js for:
-- authenticated reads/writes
-- session-aware app data
-- server-side protected operations
+Use Supabase clients for authenticated data access and secure mutations.
 
-### Next.js to Python services
+### Next.js -> Python services
 
-Use internal service calls for:
+Use internal calls for:
+
 - triggering ingestion
-- triggering or resuming a LangGraph run
-- checking worker health
+- starting/resuming runs
+- health checks
 
-### Python to Supabase
+### Python -> Supabase
 
-Python services should read and write directly to Supabase Postgres for:
-- source processing state
-- chunk storage
-- AI run state
-- report versions
+Python writes:
 
-Python services may also verify Supabase JWTs or use service-role credentials where appropriate for internal trusted execution.
+- source ingestion state
+- documents/chunks/embeddings
+- run and run step states
+- report versions and citations
 
 ---
 
-## Revised authentication flow
+## Authentication and authorization
 
-### Auth responsibilities
+### Authentication
 
-Supabase Auth should fully handle:
+Supabase Auth handles:
 
-- sign-up
-- sign-in
+- sign-up/sign-in
 - OAuth login
 - session issuance
-- refresh tokens
-- user identity
-
-### OAuth
-
-Make OAuth first-class from the beginning.
-
-Recommended providers to support first:
-- Google
-- GitHub
-
-This matters because for a portfolio-grade team workspace, OAuth reduces friction dramatically.
+- token refresh
 
 ### Authorization
 
-Do not confuse auth with authorization.
+Single-user ownership rule:
 
-Supabase Auth answers:
-- who is this user?
-
-Your app logic and later RLS answer:
-- what can this user do in this workspace?
-
-### Recommended authorization model
-
-At minimum:
-- workspace owner
-- workspace editor
-- workspace reviewer
-- workspace viewer
-
-Use application-level checks in MVP, then optionally enforce with RLS.
+- every row includes `owner_user_id`
+- app-level checks enforce ownership on reads/writes
+- optional RLS can enforce `owner_user_id = auth.uid()` at DB level
 
 ---
 
-## Revised ingestion pipeline
+## Ingestion pipeline
 
 ### Inputs
 
@@ -564,7 +448,7 @@ Use application-level checks in MVP, then optionally enforce with RLS.
 - uploaded PDFs
 - raw notes
 
-### Python ingestion responsibilities
+### Python ingestion steps
 
 1. fetch source
 2. detect content type
@@ -572,201 +456,119 @@ Use application-level checks in MVP, then optionally enforce with RLS.
 4. normalize structure
 5. chunk content
 6. compute embeddings
-7. write chunks to Supabase Postgres
-8. mark source and case progress
-
-### Why Python for ingestion
-
-This is another place where Python is the better fit. Parsing and normalization usually grow in complexity faster than expected, and Python gives you more room to evolve.
+7. write documents/chunks
+8. update source/case status
 
 ---
 
-## Revised background execution strategy
-
-### Best recommendation
-
-For this stack, prefer **Python-owned workers and orchestration**.
-
-The original PRD used BullMQ as a central mechanism. You can still do that, but once the AI runtime is Python, forcing the job brain into Node is unnecessary friction.
-
-A cleaner model is:
-
-- Next.js writes state changes
-- Python workers observe or are notified
-- Python executes ingestion and orchestration
-- Supabase is the durable state layer
-
-### Practical MVP choices
-
-#### Choice 1: Postgres-driven job table
-Use a `jobs` table in Supabase and let Python workers poll.
-
-Pros:
-- simple infra
-- fewer moving parts
-- easy local development
-
-Cons:
-- less elegant throughput scaling than a dedicated queue
-
-#### Choice 2: Redis queue with Python consumers
-Use Redis as a queue backend for Python workers.
-
-Pros:
-- better throughput
-- more traditional async worker model
-
-Cons:
-- extra infra component
-
-For an MVP, **Postgres-driven jobs are acceptable**. For scale, move to Redis or a dedicated workflow engine.
-
----
-
-## Revised observability
+## Observability
 
 Instrument:
 
 - Next.js request lifecycle
-- source ingestion jobs
-- embedding steps
-- retrieval steps
+- ingestion jobs
+- embedding and retrieval stages
 - LangGraph node execution
-- human review pause/resume
+- pause/resume checkpoints
+- publish transitions
 
-### Trace correlation
+Trace dimensions:
 
-Every important execution should carry:
-- `workspace_id`
+- `user_id`
 - `case_id`
 - `run_id`
-- `source_id` when relevant
-
-This makes debugging much easier than relying only on logs.
+- `source_id` (when relevant)
 
 ---
 
-## Revised security model
+## Security model
 
-### Core rules
+Core rules:
 
-1. Browser only talks to safe product endpoints
-2. Internal Python services are not exposed publicly unless necessary
-3. Service credentials stay server-side only
-4. Workspace authorization is enforced on every read/write path
-5. Generated reports must keep citation provenance
+1. Browser only calls safe product endpoints
+2. Python internals are private
+3. Service credentials stay server-side
+4. Ownership checks run on every read/write path
+5. Reports preserve citation provenance
 
-### Sensitive credentials
+Never expose to browser:
 
-Keep these out of the browser:
 - Supabase service role key
 - model provider keys
 - internal service secrets
 
-### File access
-
-If you store uploaded documents in Supabase Storage, ensure access paths are workspace-aware and not globally public unless intentionally designed that way.
-
 ---
 
-## Revised phased roadmap
+## Roadmap
 
-## Phase 1 — Product skeleton
-
-Goal: create a usable workspace app with auth.
+### Phase 1 — Product skeleton
 
 Build:
-- Supabase project
-- Supabase Auth with OAuth
-- Next.js app shell
-- workspace and case CRUD
-- role-aware membership model
+
+- Supabase project and auth
+- Next.js shell and auth pages
+- case CRUD
 
 Deliverable:
-- users can sign in and create a case
 
-## Phase 2 — Ingestion and indexing
+- user signs in and creates case
 
-Goal: source data becomes retrievable evidence.
+### Phase 2 — Ingestion and indexing
 
 Build:
-- URL and file sources
+
+- URL/file/note source flows
 - Python ingestion worker
-- chunking pipeline
-- embeddings in Supabase Postgres
-- case status transitions
+- chunking + embeddings
+- status transitions
 
 Deliverable:
-- a case can become `indexed`
 
-## Phase 3 — LangGraph workflow
+- case reaches `indexed`
 
-Goal: generate a reviewable draft.
+### Phase 3 — LangGraph workflow
 
 Build:
-- Python LangGraph orchestrator
-- retrieval node
-- synthesis node
-- critique node
-- citation verifier node
+
+- orchestrator graph
+- retrieval/synthesis/critique/citation checks
 - draft persistence
 
 Deliverable:
-- a case can produce a reviewable draft report
 
-## Phase 4 — Human-in-the-loop review
+- reviewable draft report generated
 
-Goal: make the system trustworthy.
+### Phase 4 — Human review and publish
 
 Build:
-- review UI in Next.js
+
+- review UI
 - approve/edit/reject actions
-- graph resume flow
-- publish logic
-- report version history
+- resume from checkpoint
+- publish and versioning
 
 Deliverable:
-- users can approve and publish grounded reports
 
-## Phase 5 — Production hardening
+- user publishes grounded report
+
+### Phase 5 — Hardening
 
 Build:
-- RLS policies
-- better retries and idempotency
-- improved observability
-- evaluation harnesses
+
+- optional RLS policies
+- retries and idempotency
+- richer observability
+- evaluation harness
 - rate limiting
-- export/share flows
 
 ---
 
 ## Final recommendation
 
-The strongest version of this project is **not** “TypeScript everywhere.”
+The strongest fit for this project remains:
 
-It is:
+- **Next.js** for product UI and BFF
+- **Supabase** for Postgres and auth
+- **Python LangGraph** for AI orchestration
 
-- **Next.js** for the product and BFF
-- **Supabase** for Postgres, auth, and OAuth
-- **Python LangGraph** for the AI orchestration layer
-
-That architecture is more realistic, more maintainable for an AI-heavy application, and more aligned with where complexity will actually grow.
-
-If you optimize this project around the hardest thing you are building, optimize around the **AI workflow runtime**, not around language uniformity.
-
-That is why this rewrite moves the PRD to a **Python LangGraph layer** and makes **Supabase DB + Supabase Auth/OAuth** foundational.
-
----
-
-## Summary of changes from the original PRD
-
-This revision changes the original guide by:
-
-- replacing the **TypeScript LangGraph layer** with a **Python LangGraph orchestration service**
-- replacing the standalone Postgres/Auth.js posture with **Supabase Postgres + Supabase Auth + OAuth**
-- shifting worker ownership toward **Python services**
-- treating Supabase as the durable platform for app state, identity, and storage
-- keeping Next.js as the user-facing app and BFF rather than the AI execution runtime
-
-The original PRD established the product goal and architectural depth well. This revised version keeps that intent, but changes the implementation to a stack that is better suited for AI-heavy systems. Source basis: fileciteturn0file0
-
+For current scope, keep the system strictly **single-user** and optimize reliability across the case -> source -> run -> report lifecycle. Multi-user SaaS constructs can be layered later only if product direction changes.
