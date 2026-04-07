@@ -14,10 +14,10 @@ import { Calendar, CalendarX, FileText, SearchCheck } from "lucide-react";
 import Searchbar from "../../Components/Common/Searchbar";
 import { Badge } from "@/components/ui/badge";
 import SearchResultCard from "../../Components/Search/SearchResultCard";
-import AddToCaseDialog from "@/app/Components/Dialogs/AddToCaseDialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   activeSearchTags,
-  getSearchResultsForScope,
+  getSearchResults,
   normalizeSearchScope,
   searchDataSources,
   searchScopeOptions,
@@ -32,21 +32,25 @@ const timeFilterIcons = [
 ];
 
 export default async function SearchPage(props: {
-  searchParams: Promise<{ scope?: string | string[]; result?: string | string[] }>;
+  searchParams: Promise<{ scope?: string | string[]; result?: string | string[]; q?: string | string[]; rate?: string | string[] }>;
 }) {
   const searchParams = await props.searchParams;
   const scope = normalizeSearchScope(searchParams.scope);
-  const scopedResults = getSearchResultsForScope(scope);
+  const searchQuery = (Array.isArray(searchParams.q) ? searchParams.q[0] : searchParams.q)?.trim() ?? "";
+  const scopedResults = getSearchResults(scope, searchQuery);
   const selectedId = Array.isArray(searchParams.result)
     ? searchParams.result[0]
     : searchParams.result;
+  const showRateLimit = (Array.isArray(searchParams.rate) ? searchParams.rate[0] : searchParams.rate) === "limited";
+  const querySuffix = searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : "";
   const selectedResult =
     scopedResults.find((item) => item.id === selectedId) ?? scopedResults[0] ?? searchResults[0];
 
   return (
     <DashboardLayout>
-      <div className="p-6 space-y-6 bg-[#f3f6f9] min-h-screen">
-        <section className="rounded-[28px] bg-[#d9e7f5] p-6 shadow-sm ring-1 ring-black/5">
+      <div className="min-h-screen space-y-6 bg-[#f3f6f9] p-6">
+        <div className="w-full space-y-6">
+        <section className="rounded-[13px] bg-[#d9e7f5] p-6 shadow-sm ring-1 ring-black/5">
           <Searchbar />
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <span className="capitalize font-[15px] text-black/50">
@@ -68,7 +72,7 @@ export default async function SearchPage(props: {
               return (
                 <Link
                   key={item.value}
-                  href={`/search?scope=${item.value}`}
+                  href={`/search?scope=${item.value}${querySuffix}`}
                   className={`rounded-full px-4 py-2 text-xs font-semibold tracking-[0.14em] transition-colors ${
                     active
                       ? "bg-slate-900 text-white"
@@ -82,9 +86,18 @@ export default async function SearchPage(props: {
           </div>
         </section>
 
-        <div className="grid gap-6 xl:grid-cols-[260px_minmax(0,1.35fr)_360px]">
+        {showRateLimit ? (
+          <Alert className="border-amber-300 bg-amber-50 text-amber-900">
+            <AlertTitle>Search rate limit reached</AlertTitle>
+            <AlertDescription>
+              Wait a moment before running another semantic search, then try again.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        <div className="grid gap-6 xl:grid-cols-[minmax(220px,260px)_minmax(0,1fr)_minmax(280px,340px)]">
           {/* left bar */}
-          <aside className="rounded-[24px] bg-white p-5 shadow-sm ring-1 ring-black/5">
+          <aside className="h-fit rounded-[13px] bg-white p-5 shadow-sm ring-1 ring-black/5 xl:sticky xl:top-24">
             {/* top heading and clear all button */}
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-semibold text-lg">Refine Data</h3>
@@ -136,7 +149,13 @@ export default async function SearchPage(props: {
           </aside>
 
           <main className="space-y-4">
-            <div className="rounded-[24px] bg-white p-4 shadow-sm ring-1 ring-black/5">
+            {/* {searchQuery.length === 0 ? (
+              <div className="rounded-[13px] border border-dashed border-slate-300 bg-white px-5 py-4 text-sm text-slate-600">
+                Try: &quot;market sizing risks&quot;, &quot;compliance drift&quot;, or &quot;citation confidence&quot;.
+              </div>
+            ) : null} */}
+
+            <div className="rounded-[13px] bg-white p-4 shadow-sm ring-1 ring-black/5">
               <div className="flex items-center gap-3">
                 <SearchCheck className="size-5 text-slate-500" />
                 <div>
@@ -150,17 +169,29 @@ export default async function SearchPage(props: {
               </div>
             </div>
 
-            {scopedResults.map((item) => (
-              <SearchResultCard
-                key={item.id}
-                item={item}
-                isSelected={item.id === selectedResult.id}
-                detailHref={`/search?scope=${scope}&result=${item.id}`}
-              />
-            ))}
+            {scopedResults.length === 0 ? (
+              <div className="rounded-[13px] border border-dashed border-slate-300 bg-white px-5 py-8 text-center text-sm text-slate-600">
+                No matches found. Try broader terms or switch scope.
+              </div>
+            ) : (
+              scopedResults.map((item) => (
+                <SearchResultCard
+                  key={item.id}
+                  item={item}
+                  isSelected={item.id === selectedResult.id}
+                  detailHref={`/search?scope=${scope}&result=${item.id}${querySuffix}`}
+                />
+              ))
+            )}
           </main>
 
-          <aside className="h-fit rounded-[24px] bg-white p-5 shadow-sm ring-1 ring-black/5 xl:sticky xl:top-24">
+          <aside className="h-fit rounded-[13px] bg-white p-5 shadow-sm ring-1 ring-black/5 xl:sticky xl:top-24">
+            {scopedResults.length === 0 ? (
+              <div className="rounded-[13px] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+                Select a different scope or query to inspect result detail.
+              </div>
+            ) : (
+              <>
             <div className="flex items-center justify-between">
               <p className="text-xs font-semibold tracking-[0.18em] text-slate-500">
                 RESULT DETAIL
@@ -189,7 +220,7 @@ export default async function SearchPage(props: {
                 </p>
               </div>
 
-              <div className="rounded-[20px] bg-slate-50 p-4">
+              {/* <div className="rounded-[20px] bg-slate-50 p-4">
                 <p className="text-xs font-semibold tracking-[0.16em] text-slate-500">
                   KEY ENTITIES
                 </p>
@@ -214,13 +245,13 @@ export default async function SearchPage(props: {
                   View Source
                 </Link>
                 <Link
-                  href={`/search?scope=${scope}&result=${selectedResult.id}`}
+                  href={`/search?scope=${scope}&result=${selectedResult.id}${querySuffix}`}
                   className="rounded-full border border-slate-200 bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
                 >
                   Summarize Result
                 </Link>
                 <AddToCaseDialog sourceTitle={selectedResult.title} />
-              </div>
+              </div> */}
 
               <div className="border-t border-slate-200 pt-4">
                 <div className="flex items-center gap-2 text-sm text-slate-600">
@@ -229,7 +260,10 @@ export default async function SearchPage(props: {
                 </div>
               </div>
             </div>
+              </>
+            )}
           </aside>
+        </div>
         </div>
       </div>
     </DashboardLayout>

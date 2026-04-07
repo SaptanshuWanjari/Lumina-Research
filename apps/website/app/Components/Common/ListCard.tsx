@@ -17,7 +17,7 @@ export default function ListCard({
 }: ListCardProps) {
   return (
     <section
-      className={cn("overflow-hidden rounded-[24px] bg-white shadow-sm ring-1 ring-black/5", className)}
+      className={cn("overflow-hidden rounded-[13px] bg-white shadow-sm ring-1 ring-black/5", className)}
       {...props}
     >
       <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">

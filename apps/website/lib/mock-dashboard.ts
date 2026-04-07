@@ -5,6 +5,7 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
+import { appRoutes } from "@/lib/mock-app";
 
 export interface DashboardStat {
   icon: LucideIcon;
@@ -72,7 +73,7 @@ export const dashboardNeedsReview: DashboardReviewItem[] = [
     description:
       "Three sources diverge on the court filing interpretation. Review the retrieval set before final synthesis continues.",
     severity: "high",
-    href: "/runs/rr-9942-x",
+    href: appRoutes.runDetail,
   },
   {
     id: "r_002",
@@ -81,6 +82,6 @@ export const dashboardNeedsReview: DashboardReviewItem[] = [
     description:
       "Confirm support strength for the latest claim cluster before the report draft is promoted.",
     severity: "medium",
-    href: "/report/fintech-uk-entry/overview",
+    href: appRoutes.reportOverview,
   },
 ];

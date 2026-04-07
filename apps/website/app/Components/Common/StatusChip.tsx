@@ -27,7 +27,7 @@ export default function StatusChip({
   return (
     <Badge
       className={cn(
-        "rounded-full px-3 py-1 text-[10px] font-semibold tracking-[0.14em]",
+        "rounded-full px-3 py-2 text-[14px] font-semibold tracking-[0.14em]",
         toneClasses[tone],
         className
       )}

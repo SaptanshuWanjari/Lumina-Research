@@ -8,6 +8,8 @@ import DashboardLayout from "../../Components/Layout/DashboardLayout";
 
 import { PlusCircle } from "lucide-react";
 import { dashboardNeedsReview, dashboardRecentCases, dashboardStats } from "@/lib/mock-dashboard";
+import { appRoutes } from "@/lib/mock-app";
+import { CreateCaseButton } from "@/app/Components/Cases/CreateCaseButton";
 
 export default function DashboardPage() {
   return (
@@ -20,21 +22,16 @@ export default function DashboardPage() {
               <h1 className="text-3xl font-bold tracking-tight text-slate-800">
                 Dashboard
               </h1>
-              <span className="text-sm font-medium text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+              {/* <span className="text-sm font-medium text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
                 PRIVATE RESEARCH
-              </span>
+              </span> */}
             </div>
             <p className="text-slate-600 mt-2">
               Review active investigations, extraction progress, and recent output quality.
             </p>
           </div>
 
-          <Button asChild className="px-6 py-6 text-lg bg-slate-900 hover:bg-slate-800 rounded-2xl">
-            <Link href="/cases/research-desk">
-              <PlusCircle size={24} />
-              New Case
-            </Link>
-          </Button>
+          <CreateCaseButton className="px-6 py-6 text-lg bg-slate-900 hover:bg-slate-800 rounded-2xl" showIcon={true} />
         </div>
 
         {/* Research Snapshot */}

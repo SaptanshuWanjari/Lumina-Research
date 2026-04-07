@@ -40,7 +40,7 @@ const RecentCases = ({
       title="Recent Cases"
       action={
         showViewAll ? (
-          <Button variant="ghost" asChild className="rounded-full px-4 text-sm font-medium text-slate-600">
+          <Button variant="ghost" asChild className="rounded-[13px] px-4 text-sm font-medium text-slate-600">
             <Link href="/cases/research-desk">View All</Link>
           </Button>
         ) : null

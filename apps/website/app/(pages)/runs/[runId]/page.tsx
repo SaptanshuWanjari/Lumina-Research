@@ -22,6 +22,10 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import Link from "next/link";
+import { RunActionButtons } from "../../../Components/Runs/RunActionButtons";
+import { RunReviewButtons } from "../../../Components/Runs/RunReviewButtons";
+import { RetryButton } from "../../../Components/Runs/RetryButton";
 
 type RunStatus = "running" | "needs_review" | "complete";
 type StepStatus = "queued" | "running" | "success" | "fail" | "paused";
@@ -50,6 +54,9 @@ interface RunDetail {
   status: RunStatus;
   startedAt: string;
   elapsed: string;
+  lastCheckpoint: string;
+  canResume: boolean;
+  recoveryHint: string;
   estimatedCompletion: string;
   artifacts: ArtifactItem[];
   notes: string[];
@@ -65,6 +72,9 @@ const RUNS: RunDetail[] = [
     status: "needs_review",
     startedAt: "Today, 10:14 AM",
     elapsed: "18m 09s",
+    lastCheckpoint: "Today, 10:29 AM",
+    canResume: true,
+    recoveryHint: "Resume from Synthesizer checkpoint after human review.",
     estimatedCompletion: "2m 14s",
     artifacts: [
       { id: "a1", label: "SEC-10K_AAPL.pdf", confidence: "98%" },
@@ -133,6 +143,9 @@ const RUNS: RunDetail[] = [
     status: "complete",
     startedAt: "Yesterday, 08:42 PM",
     elapsed: "13m 44s",
+    lastCheckpoint: "Yesterday, 08:55 PM",
+    canResume: false,
+    recoveryHint: "Run is complete. Start a new run for revisions.",
     estimatedCompletion: "Done",
     artifacts: [
       { id: "a1", label: "Rates_Forecast_2026.pdf", confidence: "97%" },
@@ -219,7 +232,7 @@ export default async function RunDetailPage(props: PageProps<"/runs/[runId]">) {
       <section className="min-h-screen bg-slate-50 p-6">
         <div className="grid w-full gap-5 xl:grid-cols-[minmax(0,2.1fr)_330px]">
           <div className="space-y-5">
-            <header className="rounded-[24px] bg-white p-6 shadow-sm ring-1 ring-black/5">
+            <header className="rounded-[13px] bg-white p-6 shadow-sm ring-1 ring-black/5">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -240,35 +253,17 @@ export default async function RunDetailPage(props: PageProps<"/runs/[runId]">) {
                       Started {run.startedAt}
                     </span>
                     <span>Elapsed {run.elapsed}</span>
+                    <span>Last checkpoint {run.lastCheckpoint}</span>
                   </div>
                 </div>
 
                 <div className="flex flex-row items-center gap-2">
-                  {run.status === "running" && (
-                    <Button className="h-10 rounded-full bg-rose-600 px-5 text-sm font-semibold text-white hover:bg-rose-700">
-                      <Square className="size-4" />
-                      Stop Run
-                    </Button>
-                  )}
-                  {run.status === "needs_review" && (
-                    <Button className="h-10 rounded-full bg-slate-800 px-5 text-sm font-semibold text-white hover:bg-slate-900 cursor-pointer">
-                      Open Review
-                    </Button>
-                  )}
-                  {run.status === "complete" && (
-                    <Button className="h-10 rounded-full bg-green-800 px-5 text-sm font-semibold text-white hover:bg-green-900">
-                      Open Report
-                    </Button>
-                  )}
-                  <Button variant="outline" className="h-10 rounded-full px-4 text-sm cursor-pointer">
-                    <Download className="size-4" />
-                    Download Trace
-                  </Button>
+                  <RunActionButtons status={run.status} />
                 </div>
               </div>
             </header>
 
-            <section className="rounded-[24px] bg-white p-5 shadow-sm ring-1 ring-black/5">
+            <section className="rounded-[13px] bg-white p-5 shadow-sm ring-1 ring-black/5">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-slate-800">
                   Steps Timeline
@@ -330,12 +325,7 @@ export default async function RunDetailPage(props: PageProps<"/runs/[runId]">) {
                         <div className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-rose-700">
                           <p className="font-semibold">Error details</p>
                           <p className="mt-1 text-sm">{step.error}</p>
-                          <Button
-                            variant="outline"
-                            className="mt-2 h-8 rounded-full border-rose-300 text-xs text-rose-700"
-                          >
-                            Retry Step
-                          </Button>
+                          <RetryButton />
                         </div>
                       ) : null}
                     </AccordionContent>
@@ -344,10 +334,10 @@ export default async function RunDetailPage(props: PageProps<"/runs/[runId]">) {
               </Accordion>
             </section>
 
-            <section className="rounded-[24px] bg-white p-5 shadow-sm ring-1 ring-black/5">
+            <section className="rounded-[13px] bg-white p-5 shadow-sm ring-1 ring-black/5">
               <h3 className="text-base font-semibold text-slate-800">Output Artifacts</h3>
               <div className="mt-3 grid gap-3 md:grid-cols-3">
-                <article className="rounded-2xl bg-slate-100 p-4">
+                <article className="rounded-[13px] bg-slate-100 p-4">
                   <p className="text-[14px] font-semibold tracking-[0.14em] text-slate-500">
                     DRAFT REPORT
                   </p>
@@ -355,7 +345,7 @@ export default async function RunDetailPage(props: PageProps<"/runs/[runId]">) {
                     Ready for review with citation markers.
                   </p>
                 </article>
-                <article className="rounded-2xl bg-slate-100 p-4">
+                <article className="rounded-[13px] bg-slate-100 p-4">
                   <p className="text-[14px] font-semibold tracking-[0.14em] text-slate-500">
                     RETRIEVAL SET
                   </p>
@@ -363,7 +353,7 @@ export default async function RunDetailPage(props: PageProps<"/runs/[runId]">) {
                     {run.artifacts.length} top artifacts retained for synthesis.
                   </p>
                 </article>
-                <article className="rounded-2xl bg-slate-100 p-4">
+                <article className="rounded-[13px] bg-slate-100 p-4">
                   <p className="text-[14px] font-semibold tracking-[0.14em] text-slate-500">
                     CRITIC NOTES
                   </p>
@@ -376,7 +366,7 @@ export default async function RunDetailPage(props: PageProps<"/runs/[runId]">) {
           </div>
 
           <aside>
-            <section className="rounded-[24px] bg-white p-5 shadow-sm ring-1 ring-black/5">
+            <section className="rounded-[13px] bg-white p-5 shadow-sm ring-1 ring-black/5">
               <h3 className="text-xs font-semibold tracking-[0.16em] text-slate-500">
                 RUN CONTROL CENTER
               </h3>
@@ -397,6 +387,7 @@ export default async function RunDetailPage(props: PageProps<"/runs/[runId]">) {
                           ? "Analysis is currently executing."
                           : "Run completed and stored locally."}
                     </p>
+                    <p className="mt-1 text-xs text-slate-500">{run.recoveryHint}</p>
                   </div>
                   <div className="rounded-xl bg-slate-100 px-3 py-3">
                     <p className="text-xs font-semibold tracking-[0.14em] text-slate-500">
@@ -449,7 +440,7 @@ export default async function RunDetailPage(props: PageProps<"/runs/[runId]">) {
               {run.status === "needs_review" && (
                 <>
                   <div className="my-5 h-px bg-slate-200" />
-                  <div className="rounded-2xl bg-amber-50 p-4">
+                  <div className="rounded-[13px] bg-amber-50 p-4">
                     <h4 className="text-sm font-semibold text-amber-900">
                       Human Intervention Needed
                     </h4>
@@ -467,23 +458,7 @@ export default async function RunDetailPage(props: PageProps<"/runs/[runId]">) {
                         Sensitive content concerns?
                       </li>
                     </ul>
-                    <div className="mt-3 space-y-2">
-                      <Button className="h-9 w-full rounded-full bg-slate-900 text-xs font-semibold text-white hover:bg-slate-800">
-                        Approve & Continue
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="h-9 w-full rounded-full text-xs font-semibold"
-                      >
-                        Request Revision
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="h-9 w-full rounded-full border-rose-300 text-xs font-semibold text-rose-700"
-                      >
-                        Reject Run
-                      </Button>
-                    </div>
+                    <RunReviewButtons />
                   </div>
                 </>
               )}

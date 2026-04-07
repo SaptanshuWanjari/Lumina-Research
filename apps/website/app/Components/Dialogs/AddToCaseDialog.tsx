@@ -119,7 +119,15 @@ export default function AddToCaseDialog({
 
         <DialogFooter>
           <Button variant="outline">Cancel</Button>
-          <Button disabled={!selectedCaseId}>Attach to Case</Button>
+          <Button 
+            disabled={!selectedCaseId}
+            onClick={() => {
+              console.log(`Attach to Case: case ID ${selectedCaseId}`);
+              alert(`Attach to Case: case ID ${selectedCaseId}`);
+            }}
+          >
+            Attach to Case
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

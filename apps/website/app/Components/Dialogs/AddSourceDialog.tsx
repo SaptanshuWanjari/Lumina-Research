@@ -70,7 +70,7 @@ export default function AddSourceDialog({
           <TabsContent value="paste" className="space-y-3 pt-4">
             <Textarea
               placeholder="Paste raw source text..."
-              className="min-h-[180px] rounded-3xl border-slate-200 bg-slate-50"
+              className="min-h-[180px] rounded-[13px] border-slate-200 bg-slate-50"
             />
             <p className="text-xs text-slate-500">
               Paste long-form notes, analyst summaries, or extracted content.
@@ -79,7 +79,14 @@ export default function AddSourceDialog({
         </Tabs>
         <DialogFooter>
           <Button variant="outline">Cancel</Button>
-          <Button>Add Source</Button>
+          <Button
+            onClick={() => {
+              console.log("Add Source: Ingesting source...");
+              alert("Add Source: Ingesting source...");
+            }}
+          >
+            Add Source
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

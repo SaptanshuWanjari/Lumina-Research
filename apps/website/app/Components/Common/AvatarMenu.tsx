@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { localProfile } from "@/lib/mock-app";
+import { appRoutes, localProfile } from "@/lib/mock-app";
 
 export default function AvatarMenu() {
   const router = useRouter();
@@ -35,11 +35,11 @@ export default function AvatarMenu() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => router.push("/settings?section=general")}>
+        <DropdownMenuItem onClick={() => router.push(appRoutes.settings)}>
           <UserCircle2 className="size-4" />
           Local Profile
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => router.push("/settings?section=security")}>
+        <DropdownMenuItem onClick={() => router.push(`${appRoutes.settings}?section=security`)}>
           <Settings className="size-4" />
           Preferences
         </DropdownMenuItem>

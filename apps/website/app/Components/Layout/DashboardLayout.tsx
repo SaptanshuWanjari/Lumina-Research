@@ -1,33 +1,48 @@
 "use client"
 
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import SideBar from "../Utility/SideBar";
 import DashboardNavbar from "../Navigation/DashboardNavbar";
+import { AppRealtimeProvider } from "../Providers/AppRealtimeProvider";
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
+function getInitialSidebarState() {
+  if (typeof document === "undefined") return true;
+  const cookie = document.cookie
+    .split(";")
+    .map((item) => item.trim())
+    .find((item) => item.startsWith("sidebar_state="));
+  if (!cookie) return true;
+
+  const value = cookie.split("=")[1];
+  return value !== "false";
+}
+
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(getInitialSidebarState);
+
   return (
-    <TooltipProvider>
-      <SidebarProvider defaultOpen={true}>
-        <div className="flex min-h-screen w-full bg-slate-50">
-          <SideBar />
+    <AppRealtimeProvider>
+      <TooltipProvider>
+        <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
+          <div className="flex min-h-screen w-full bg-slate-50">
+            <SideBar />
 
-          <SidebarInset className="min-h-screen">
-            <header className="sticky top-0 z-40 w-full border-b bg-white/95 backdrop-blur">
-              <DashboardNavbar />
-            </header>
+            <SidebarInset className="min-h-screen">
+              <header className="sticky top-0 z-40 w-full border-b bg-white/95 backdrop-blur">
+                <DashboardNavbar />
+              </header>
 
-            <main className="flex-1 overflow-auto">
-              {children}
-            </main>
-          </SidebarInset>
-        </div>
-      </SidebarProvider>
-    </TooltipProvider>
+              <main className="flex-1 overflow-auto">{children}</main>
+            </SidebarInset>
+          </div>
+        </SidebarProvider>
+      </TooltipProvider>
+    </AppRealtimeProvider>
   );
 }

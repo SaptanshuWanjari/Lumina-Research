@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -15,9 +14,7 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
 import { isActivePath, quickActions, sidebarNavItems } from "@/lib/mock-app";
-import { Sparkles } from "lucide-react";
 
 const SideBar = () => {
   const pathname = usePathname();
@@ -26,10 +23,10 @@ const SideBar = () => {
   return (
     <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader>
-        <SidebarGroupLabel className="px-3 text-[11px] uppercase tracking-[0.16em] text-sidebar-foreground/50">
+        <SidebarGroupLabel className="px-3 text-[16px] uppercase tracking-[0.16em] text-sidebar-foreground/50 group-data-[collapsible=icon]:hidden">
           Research Desk
         </SidebarGroupLabel>
-        <div className="rounded-2xl bg-slate-100 px-3 py-3">
+        <div className="rounded-[13px] bg-slate-100 px-3 py-3 group-data-[collapsible=icon]:hidden">
           <p className="text-sm font-semibold text-slate-800">Local Analyst</p>
           <p className="text-xs text-slate-500">Private research mode</p>
         </div>
@@ -37,7 +34,7 @@ const SideBar = () => {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="px-3 text-[11px] uppercase tracking-[0.16em] text-sidebar-foreground/50">
+          <SidebarGroupLabel className="px-3 text-[15px] uppercase tracking-[0.16em] text-sidebar-foreground/50 group-data-[collapsible=icon]:hidden">
             Navigate
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -66,7 +63,7 @@ const SideBar = () => {
         <SidebarSeparator />
 
         <SidebarGroup>
-          <SidebarGroupLabel className="px-3 text-[11px] uppercase tracking-[0.16em] text-sidebar-foreground/50">
+          <SidebarGroupLabel className="px-3 text-[15px] uppercase tracking-[0.16em] text-sidebar-foreground/50 group-data-[collapsible=icon]:hidden">
             Quick Action
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -88,21 +85,6 @@ const SideBar = () => {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-
-      <SidebarFooter>
-        <div className="rounded-2xl bg-slate-100 px-3 py-3 text-sm text-slate-600">
-          <div className="flex items-center gap-2 text-slate-800">
-            <Sparkles className="size-4" />
-            <span className="font-semibold">Local Notes</span>
-          </div>
-          <p className="mt-1 text-xs text-slate-500">
-            Keep analysis context and quick reminders close to the shell.
-          </p>
-        </div>
-        <Button variant="outline" className="rounded-full">
-          Open Notes
-        </Button>
-      </SidebarFooter>
     </Sidebar>
   );
 };

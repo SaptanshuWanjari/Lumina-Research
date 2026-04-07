@@ -1,3 +1,5 @@
+import { appRoutes } from "@/lib/mock-app";
+
 export type SearchScope = "sources" | "chunks" | "reports";
 
 export type SearchSnippetPart = {
@@ -105,7 +107,7 @@ export const searchResults: SearchResultItem[] = [
     confidence: 91,
     relevance: "MEDIUM",
     sourceKind: "Published Report",
-    sourceHref: "/report/fintech-uk-entry/overview",
+    sourceHref: appRoutes.reportOverview,
     snippet: [
       { text: "…analysis of " },
       { text: "quantum-resistant algorithms", highlight: true },
@@ -134,4 +136,27 @@ export function normalizeSearchScope(value?: string | string[]): SearchScope {
 export function getSearchResultsForScope(scope: SearchScope) {
   const scoped = searchResults.filter((item) => item.scope === scope);
   return scoped.length > 0 ? scoped : searchResults;
+}
+
+export function getSearchResults(scope: SearchScope, query?: string) {
+  const scoped = getSearchResultsForScope(scope);
+  const normalized = query?.trim().toLowerCase() ?? "";
+  if (!normalized) return scoped;
+
+  const matched = scoped.filter((item) => {
+    const haystack = [
+      item.title,
+      item.publisher,
+      item.type,
+      item.summary,
+      item.keyEntities.join(" "),
+      item.snippet.map((part) => part.text).join(" "),
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    return haystack.includes(normalized);
+  });
+
+  return matched;
 }

@@ -36,7 +36,7 @@ const Health = () => {
   };
 
   return (
-    <div className="bg-[#c9d3df] rounded-[28px] p-6 flex items-center justify-between">
+    <div className="bg-[#c9d3df] rounded-[13px] p-6 flex items-center justify-between">
       {/* LEFT */}
       <div className="max-w-95">
         <h2 className="text-[32px] font-semibold text-slate-700 leading-tight mb-3">
@@ -74,7 +74,7 @@ const Health = () => {
       </div>
 
       {/* RIGHT CARD */}
-      <div className="bg-[#dde3ea] rounded-[24px] px-5 py-6 w-60">
+      <div className="bg-[#dde3ea] rounded-[13px] px-5 py-6 w-60">
         {/* header */}
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-slate-700 font-semibold text-lg">

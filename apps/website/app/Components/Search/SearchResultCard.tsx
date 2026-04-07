@@ -16,7 +16,7 @@ const SearchResultCard = ({
 }: SearchResultCardProps) => {
   return (
     <article
-      className={`rounded-[24px] p-5 shadow-sm ring-1 transition-colors md:p-6 ${
+      className={`rounded-[13px] p-5 shadow-sm ring-1 transition-colors md:p-6 ${
         isSelected
           ? "bg-white ring-slate-900/12"
           : "bg-[#f7fafc] ring-black/5 hover:bg-white"

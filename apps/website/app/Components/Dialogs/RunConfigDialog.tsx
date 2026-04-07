@@ -81,14 +81,21 @@ export default function RunConfigDialog({
               </Select>
             </div>
           </div>
-          <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
+          <label className="flex items-center gap-3 rounded-[13px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
             <Checkbox defaultChecked />
             <span>Enable human review gate before publish</span>
           </label>
         </div>
         <DialogFooter>
           <Button variant="outline">Cancel</Button>
-          <Button>Start Run</Button>
+          <Button
+            onClick={() => {
+              console.log("Start Run: Starting analysis run...");
+              alert("Start Run: Starting analysis run...");
+            }}
+          >
+            Start Run
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -1,5 +1,30 @@
-import { redirect } from "next/navigation";
+// import { redirect } from "next/navigation";
+import NavBar from "./Components/Navigation/Navbar";
+import Hero from "./Components/Home/Hero";
+import Features from "./Components/Home/Features";
+import FAQ from "./Components/Home/FAQ";
+import BottomCTA from "./Components/Home/BottomCTA";
+import Footer from "./Components/Common/Footer";
 
 export default function Home() {
-  redirect("/dashboard");
+  return (
+    // redirect("/dashboard");
+    <div className="bg-[##f5f7fa]">
+      <NavBar />
+      <Hero />
+      <section className="max-w-7xl mx-auto px-4 py-12 text-center">
+        <Features />
+      </section>
+
+      <section className="max-w-7xl mx-auto px-4 py-12 text-center">
+        <FAQ />
+      </section>
+
+      <section className="max-w-7xl mx-auto px-4 py-12 text-center">
+        <BottomCTA />
+      </section>
+
+      <Footer />
+    </div>
+  );
 }

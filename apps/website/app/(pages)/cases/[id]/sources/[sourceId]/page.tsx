@@ -20,118 +20,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-
-type SourceStatus = "pending" | "ingesting" | "indexed" | "failed";
-
-interface Chunk {
-  id: string;
-  title: string;
-  excerpt: string;
-  pageRange: string;
-  vectorized: boolean;
-  usedInReport: boolean;
-}
-
-interface SourceDetail {
-  caseId: string;
-  sourceId: string;
-  title: string;
-  description: string;
-  status: SourceStatus;
-  sourceType: "PDF" | "URL" | "NOTE";
-  fileSize: string;
-  chunksCount: number;
-  indexedAt: string;
-  modelUsed: string;
-  tokenCount: string;
-  summary: string;
-  entities: string[];
-  chunks: Chunk[];
-  errors?: { title: string; detail: string; fix: string }[];
-}
-
-const SOURCES: SourceDetail[] = [
-  {
-    caseId: "c_001",
-    sourceId: "q3-financial-projections",
-    title: "Q3_Financial_Projections_v4.pdf",
-    description:
-      "Deep inspection of internal financial reporting for Q3 2024. This source provides foundational data for the current fiscal analysis desk.",
-    status: "indexed",
-    sourceType: "PDF",
-    fileSize: "12.4 MB",
-    chunksCount: 142,
-    indexedAt: "Oct 12, 2024",
-    modelUsed: "text-emb-3",
-    tokenCount: "42.8k",
-    summary:
-      "The source highlights a strategic pivot toward AI-integrated financial workflows, noting significant revenue growth in institutional sectors while maintaining strict operational expense controls.",
-    entities: ["Growth Patterns", "Risk Mitigation", "Q3 2024", "LLM"],
-    chunks: [
-      {
-        id: "chunk-001",
-        title: "Executive Summary",
-        excerpt:
-          "The primary drivers for third quarter growth are attributed to decentralized asset management tools and institutional API access acceleration.",
-        pageRange: "Page 1 · Para 1-4",
-        vectorized: true,
-        usedInReport: true,
-      },
-      {
-        id: "chunk-002",
-        title: "Financial Metrics",
-        excerpt:
-          "Operating expenses remained stable at $4.2M, reflecting a disciplined approach to overhead while platform migration continued.",
-        pageRange: "Page 2 · Para 5-8",
-        vectorized: true,
-        usedInReport: true,
-      },
-      {
-        id: "chunk-003",
-        title: "Risk Vectors",
-        excerpt:
-          "Key risks include compliance volatility in Asia markets and potential compute cost spikes during peak inference cycles.",
-        pageRange: "Page 3 · Para 1-3",
-        vectorized: true,
-        usedInReport: false,
-      },
-    ],
-  },
-  {
-    caseId: "c_001",
-    sourceId: "legacy-ops-note",
-    title: "legacy_ops_note.md",
-    description:
-      "Operational note imported from an archived research folder and awaiting normalization.",
-    status: "failed",
-    sourceType: "NOTE",
-    fileSize: "34 KB",
-    chunksCount: 0,
-    indexedAt: "N/A",
-    modelUsed: "N/A",
-    tokenCount: "N/A",
-    summary:
-      "No summary available because extraction failed during content sanitation.",
-    entities: [],
-    chunks: [],
-    errors: [
-      {
-        title: "Unsupported markdown table structure",
-        detail:
-          "Parser detected malformed nested table syntax during extract stage.",
-        fix: "Clean source formatting and retry extraction.",
-      },
-    ],
-  },
-];
-
-function findSource(caseId: string, sourceId: string): SourceDetail {
-  return (
-    SOURCES.find(
-      (source) => source.caseId === caseId && source.sourceId === sourceId
-    ) ?? SOURCES[0]
-  );
-}
+import { getSourceById, type SourceStatus } from "@/lib/mock-cases";
+import { ReSyncButton, LaunchExplorerButton, SourceActionMenu } from "@/app/Components/Sources/SourceActionButtons";
 
 function statusBadgeClass(status: SourceStatus) {
   if (status === "indexed") return "bg-emerald-100 text-emerald-800";
@@ -153,7 +43,7 @@ export async function generateMetadata(
   props: PageProps<"/cases/[id]/sources/[sourceId]">
 ): Promise<Metadata> {
   const { id, sourceId } = await props.params;
-  const source = findSource(id, sourceId);
+  const source = getSourceById(id, sourceId);
   return {
     title: `${source.title} · Source Extraction`,
   };
@@ -165,7 +55,7 @@ export default async function SourceExtractionPage(
   const { id, sourceId } = await props.params;
   const query = await props.searchParams;
 
-  const source = findSource(id, sourceId);
+  const source = getSourceById(id, sourceId);
   const selectedChunkId =
     typeof query.chunk === "string" ? query.chunk : source.chunks[0]?.id;
   const selectedChunk =
@@ -178,7 +68,7 @@ export default async function SourceExtractionPage(
       <section className="min-h-screen bg-slate-50 p-6">
         <div className="grid w-full gap-5 xl:grid-cols-[minmax(0,2.1fr)_330px]">
           <div className="space-y-5">
-            <header className="rounded-[24px] bg-white p-6 shadow-sm ring-1 ring-black/5">
+            <header className="rounded-[13px] bg-white p-6 shadow-sm ring-1 ring-black/5">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -202,20 +92,17 @@ export default async function SourceExtractionPage(
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <div className="rounded-xl bg-slate-100 px-3 py-2 text-[12px]s text-slate-600">
+                  <div className="rounded-xl bg-slate-100 px-3 py-2 text-xs text-slate-600">
                     <p>FILE SIZE</p>
                     <p className="font-semibold text-slate-800">{source.fileSize}</p>
                   </div>
-                  <div className="rounded-xl bg-slate-100 px-3 py-2 text-[12px]s text-slate-600">
+                  <div className="rounded-xl bg-slate-100 px-3 py-2 text-xs text-slate-600">
                     <p>CHUNKS</p>
                     <p className="font-semibold text-slate-800">
                       {source.chunksCount}
                     </p>
                   </div>
-                  <Button className="h-10 rounded-full bg-slate-950 px-5 text-sm font-semibold text-white hover:bg-slate-800">
-                    <RefreshCw className="size-4" />
-                    Re-sync Source
-                  </Button>
+                  <ReSyncButton />
                 </div>
               </div>
 
@@ -233,7 +120,7 @@ export default async function SourceExtractionPage(
                       >
                         {done ? <CheckCircle2 className="size-3" /> : idx + 1}
                       </span>
-                      <span className="text-[12px]s font-semibold uppercase tracking-wide text-slate-600">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">
                         {step}
                       </span>
                       {idx < PIPELINE_STEPS.length - 1 && (
@@ -245,7 +132,7 @@ export default async function SourceExtractionPage(
               </div>
             </header>
 
-            <section className="rounded-[24px] bg-white p-5 shadow-sm ring-1 ring-black/5">
+            <section className="rounded-[13px] bg-white p-5 shadow-sm ring-1 ring-black/5">
               <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <h2 className="text-lg font-semibold tracking-[0.06em] text-slate-800">
                   Document Content Chunks
@@ -261,7 +148,7 @@ export default async function SourceExtractionPage(
               <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(280px,1fr)]">
                 <div className="space-y-3">
                   {source.chunks.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                    <div className="rounded-[13px] border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
                       No chunks available for this source state.
                     </div>
                   ) : (
@@ -269,7 +156,7 @@ export default async function SourceExtractionPage(
                       <Link
                         key={chunk.id}
                         href={`/cases/${id}/sources/${sourceId}?chunk=${chunk.id}`}
-                        className={`block rounded-2xl border px-4 py-3 transition-colors ${
+                        className={`block rounded-[13px] border px-4 py-3 transition-colors ${
                           selectedChunk?.id === chunk.id
                             ? "border-slate-400 bg-slate-100"
                             : "border-slate-200 bg-white hover:bg-slate-50"
@@ -301,7 +188,7 @@ export default async function SourceExtractionPage(
                   )}
                 </div>
 
-                <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <article className="rounded-[13px] border border-slate-200 bg-slate-50 p-4">
                   <h3 className="text-sm font-semibold tracking-[0.1em] text-slate-500">
                     Chunk Detail
                   </h3>
@@ -313,7 +200,7 @@ export default async function SourceExtractionPage(
                       <p className="mt-2 text-sm leading-relaxed text-slate-600">
                         {selectedChunk.excerpt}
                       </p>
-                      <div className="mt-4 grid grid-cols-2 gap-2 text-[12px]s text-slate-600">
+                      <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-600">
                         <div className="rounded-xl bg-white px-3 py-2">
                           <p className="text-[12px] tracking-widest text-slate-400">
                             USED IN REPORT
@@ -346,18 +233,13 @@ export default async function SourceExtractionPage(
                       Embeddings visualization available for semantic drift
                       inspection.
                     </p>
-                    <Button
-                      variant="outline"
-                      className="mt-3 h-8 w-full rounded-full text-[12px]s"
-                    >
-                      Launch Explorer
-                    </Button>
+                    <LaunchExplorerButton />
                   </div>
                 </article>
               </div>
 
               <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(220px,1fr)]">
-                <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <article className="rounded-[13px] border border-slate-200 bg-slate-50 p-4">
                   <p className="text-[15px] font-semibold tracking-[0.12em] text-slate-500">
                     AUTOMATED EXECUTIVE SUMMARY
                   </p>
@@ -365,7 +247,7 @@ export default async function SourceExtractionPage(
                     &quot;{source.summary}&quot;
                   </p>
                 </article>
-                <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <article className="rounded-[13px] border border-slate-200 bg-slate-50 p-4">
                   <p className="text-[15px] font-semibold tracking-[0.12em] text-slate-500">
                     PRIMARY DETECTED ENTITIES
                   </p>
@@ -380,7 +262,7 @@ export default async function SourceExtractionPage(
                         </Badge>
                       ))
                     ) : (
-                      <p className="text-[12px]s text-slate-500">
+                      <p className="text-xs text-slate-500">
                         No entities detected in current source state.
                       </p>
                     )}
@@ -390,7 +272,7 @@ export default async function SourceExtractionPage(
             </section>
 
             {source.status === "failed" && source.errors?.length ? (
-              <section className="rounded-[24px] bg-white p-5 shadow-sm ring-1 ring-black/5">
+              <section className="rounded-[13px] bg-white p-5 shadow-sm ring-1 ring-black/5">
                 <h2 className="text-base font-semibold tracking-[0.06em] text-slate-800">
                   Errors
                 </h2>
@@ -417,20 +299,20 @@ export default async function SourceExtractionPage(
           </div>
 
           <aside>
-            <section className="rounded-[24px] bg-white p-5 shadow-sm ring-1 ring-black/5">
-              <h3 className="text-[12px]s font-semibold tracking-[0.16em] text-slate-500">
+            <section className="rounded-[13px] bg-white p-5 shadow-sm ring-1 ring-black/5">
+              <h3 className="text-xs font-semibold tracking-[0.16em] text-slate-500">
                 SOURCE CONTROL CENTER
               </h3>
 
               <div className="mt-4">
-                <p className="text-[12px]s font-semibold tracking-[0.16em] text-slate-500">
+                <p className="text-xs font-semibold tracking-[0.16em] text-slate-500">
                   SOURCE HEALTH
                 </p>
                 <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
                   <div className="h-full w-[84%] rounded-full bg-slate-700" />
                 </div>
-                <p className="mt-1 text-[12px]s text-slate-500">Readability 84%</p>
-                <div className="mt-3 grid grid-cols-2 gap-2 text-[12px]s">
+                <p className="mt-1 text-xs text-slate-500">Readability 84%</p>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                   <div className="rounded-xl bg-slate-100 px-3 py-2">
                     <p className="text-[10px] tracking-widest text-slate-400">
                       DENSITY
@@ -449,32 +331,19 @@ export default async function SourceExtractionPage(
               <div className="my-5 h-px bg-slate-200" />
 
               <div>
-                <p className="text-[12px]s font-semibold tracking-[0.16em] text-slate-500">
+                <p className="text-xs font-semibold tracking-[0.16em] text-slate-500">
                   ACTIONS
                 </p>
-                <div className="mt-3 space-y-2">
-                  <button
-                    type="button"
-                    className="flex w-full items-center justify-between rounded-xl bg-slate-100 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-200"
-                  >
-                    Download PDF <Download className="size-4" />
-                  </button>
-                  <button
-                    type="button"
-                    className="flex w-full items-center justify-between rounded-xl bg-rose-50 px-3 py-2 text-left text-sm font-medium text-rose-700 hover:bg-rose-100"
-                  >
-                    Purge Index <Archive className="size-4" />
-                  </button>
-                </div>
+                <SourceActionMenu />
               </div>
 
               <div className="my-5 h-px bg-slate-200" />
 
               <div>
-                <p className="text-[12px]s font-semibold tracking-[0.16em] text-slate-500">
+                <p className="text-xs font-semibold tracking-[0.16em] text-slate-500">
                   INDEX METADATA
                 </p>
-                <ul className="mt-3 space-y-2 text-[12px]s text-slate-600">
+                <ul className="mt-3 space-y-2 text-xs text-slate-600">
                   <li className="flex justify-between">
                     <span>Indexed Date:</span>
                     <span className="font-semibold text-slate-700">
@@ -498,7 +367,7 @@ export default async function SourceExtractionPage(
 
               {/* <div className="my-5 h-px bg-slate-200" />
 
-              <div className="rounded-2xl bg-slate-900 p-4 text-white">
+              <div className="rounded-[13px] bg-slate-900 p-4 text-white">
                 <div className="flex items-center gap-2">
                   <Sparkles className="size-4" />
                   <h4 className="text-sm font-semibold tracking-wide">

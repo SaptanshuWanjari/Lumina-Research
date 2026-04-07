@@ -17,7 +17,7 @@ const StatCard = ({
 }: StatCardProps) => {
   return (
     <div
-      className={`${bgColor} rounded-[24px] p-6 shadow-sm ring-1 ring-black/5 flex flex-col items-start gap-4 min-h-[140px]`}
+      className={`${bgColor} rounded-[13px] p-6 shadow-sm ring-1 ring-black/5 flex flex-col items-start gap-4 min-h-[140px]`}
     >
       {/* Icon */}
       <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">

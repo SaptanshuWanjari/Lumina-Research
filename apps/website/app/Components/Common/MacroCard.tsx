@@ -19,7 +19,7 @@ export default function MacroCard({
 }: MacroCardProps) {
   return (
     <Card
-      className={cn("rounded-[28px] py-0 shadow-sm ring-1 ring-black/5", className)}
+      className={cn("rounded-[13px] py-0 shadow-sm ring-1 ring-black/5", className)}
       {...props}
     >
       <section>

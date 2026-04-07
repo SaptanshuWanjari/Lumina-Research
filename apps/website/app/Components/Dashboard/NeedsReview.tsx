@@ -49,7 +49,7 @@ const NeedsReview = ({
         items.map((item) => (
           <article
             key={item.id}
-            className="rounded-2xl border border-slate-200 p-4 transition-colors hover:border-slate-300"
+            className="rounded-[13px] border border-slate-200 p-4 transition-colors hover:border-slate-300"
           >
             <div className="mb-3 flex items-start justify-between">
               <div className="flex items-center gap-2">
@@ -69,7 +69,7 @@ const NeedsReview = ({
                     <User className="w-4 h-4 text-slate-600" strokeWidth={2} />
                   )}
                 </div>
-                <span className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">
+                <span className="text-[15px] font-bold tracking-widest text-slate-500 uppercase">
                   {item.type}
                 </span>
               </div>
@@ -80,7 +80,7 @@ const NeedsReview = ({
                 />
               )}
             </div>
-            <h3 className="font-semibold text-slate-800 mb-2 text-[15px]">
+            <h3 className="font-semibold text-slate-800 mb-2 text-[16px]">
               {item.title}
             </h3>
             <p className="text-sm text-slate-600 leading-relaxed mb-4">

@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../lib/generated/prisma"
@@ -10,4 +5,510 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+enum CaseStatus {
+  draft
+  ingesting
+  indexed
+  analyzing
+  review
+  published
+  failed
+  archived
+}
+
+enum CasePriority {
+  low
+  normal
+  high
+  urgent
+}
+
+enum SourceType {
+  url
+  file
+  note
+}
+
+enum SourceStatus {
+  pending
+  fetching
+  extracting
+  chunking
+  embedding
+  indexed
+  failed
+  archived
+}
+
+enum RunStatus {
+  queued
+  running
+  needs_review
+  resuming
+  complete
+  failed
+  cancelled
+}
+
+enum RunStepStatus {
+  queued
+  running
+  success
+  failed
+  paused
+  skipped
+}
+
+enum RunArtifactType {
+  retrieval_set
+  draft_report
+  critique_notes
+  citation_validation
+  human_review
+  trace
+  other
+}
+
+enum ReportVersionStatus {
+  draft
+  published
+  archived
+}
+
+enum IngestionAttemptStatus {
+  queued
+  running
+  success
+  failed
+  cancelled
+}
+
+enum IngestionStage {
+  fetch
+  extract
+  chunk
+  embed
+  index
+}
+
+enum JobType {
+  ingest_source
+  start_run
+  resume_run
+  reindex_case
+  publish_report
+}
+
+enum JobStatus {
+  queued
+  running
+  succeeded
+  failed
+  cancelled
+}
+
+enum AuditEntityType {
+  profile
+  case
+  source
+  document
+  chunk
+  run
+  run_step
+  report_version
+  job
+}
+
+enum AuditActionType {
+  created
+  updated
+  deleted
+  archived
+  restored
+  started
+  completed
+  failed
+  approved
+  rejected
+  published
+}
+
+model Profile {
+  userId      String   @id @map("user_id") @db.Uuid
+  email       String?  @unique @db.Citext
+  displayName String?  @map("display_name")
+  avatarUrl   String?  @map("avatar_url")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  cases                  Case[]             @relation("CaseOwner")
+  sources                Source[]           @relation("SourceOwner")
+  documents              Document[]         @relation("DocumentOwner")
+  chunks                 Chunk[]            @relation("ChunkOwner")
+  runsOwned              Run[]              @relation("RunOwner")
+  runsTriggered          Run[]              @relation("RunTriggeredBy")
+  runsApproved           Run[]              @relation("RunApprovedBy")
+  runSteps               RunStep[]          @relation("RunStepOwner")
+  runArtifacts           RunArtifact[]      @relation("RunArtifactOwner")
+  reportVersions         ReportVersion[]    @relation("ReportVersionOwner")
+  reportVersionsAuthored ReportVersion[]    @relation("ReportVersionCreatedBy")
+  reportClaims           ReportClaim[]      @relation("ReportClaimOwner")
+  reportCitations        ReportCitation[]   @relation("ReportCitationOwner")
+  ingestionAttempts      IngestionAttempt[] @relation("IngestionAttemptOwner")
+  jobs                   Job[]              @relation("JobOwner")
+  auditLogsOwned         AuditLog[]         @relation("AuditLogOwner")
+  auditLogsActor         AuditLog[]         @relation("AuditLogActor")
+
+  @@map("profiles")
+}
+
+model Case {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ownerUserId     String       @map("owner_user_id") @db.Uuid
+  title           String
+  question        String?      @db.Text
+  summary         String?      @db.Text
+  status          CaseStatus   @default(draft)
+  priority        CasePriority @default(normal)
+  tags            String[]     @default([])
+  lastIngestedAt  DateTime?    @map("last_ingested_at") @db.Timestamptz(6)
+  lastRunAt       DateTime?    @map("last_run_at") @db.Timestamptz(6)
+  lastPublishedAt DateTime?    @map("last_published_at") @db.Timestamptz(6)
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  archivedAt      DateTime?    @map("archived_at") @db.Timestamptz(6)
+
+  owner             Profile            @relation("CaseOwner", fields: [ownerUserId], references: [userId], onDelete: Cascade)
+  sources           Source[]
+  documents         Document[]
+  chunks            Chunk[]
+  runs              Run[]
+  runArtifacts      RunArtifact[]
+  reportVersions    ReportVersion[]
+  ingestionAttempts IngestionAttempt[]
+  jobs              Job[]
+
+  @@index([ownerUserId, updatedAt(sort: Desc)], map: "idx_cases_owner_updated_desc")
+  @@index([ownerUserId, status], map: "idx_cases_owner_status")
+  @@index([ownerUserId, archivedAt], map: "idx_cases_owner_archived")
+  @@index([tags], type: Gin, map: "idx_cases_tags_gin")
+  @@map("cases")
+}
+
+model Source {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  caseId       String       @map("case_id") @db.Uuid
+  ownerUserId  String       @map("owner_user_id") @db.Uuid
+  sourceType   SourceType   @map("source_type")
+  title        String?
+  url          String?      @db.Text
+  storagePath  String?      @map("storage_path")
+  noteText     String?      @map("note_text") @db.Text
+  contentHash  String?      @map("content_hash")
+  status       SourceStatus @default(pending)
+  errorMessage String?      @map("error_message") @db.Text
+  metadataJson Json?        @map("metadata_json")
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  archivedAt   DateTime?    @map("archived_at") @db.Timestamptz(6)
+
+  case              Case               @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  owner             Profile            @relation("SourceOwner", fields: [ownerUserId], references: [userId], onDelete: Cascade)
+  documents         Document[]
+  reportCitations   ReportCitation[]
+  ingestionAttempts IngestionAttempt[]
+  jobs              Job[]
+
+  @@unique([caseId, contentHash], map: "uq_sources_case_content_hash")
+  @@index([caseId, status], map: "idx_sources_case_status")
+  @@index([ownerUserId, createdAt(sort: Desc)], map: "idx_sources_owner_created_desc")
+  @@index([ownerUserId, archivedAt], map: "idx_sources_owner_archived")
+  @@map("sources")
+}
+
+model Document {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sourceId     String   @map("source_id") @db.Uuid
+  caseId       String   @map("case_id") @db.Uuid
+  ownerUserId  String   @map("owner_user_id") @db.Uuid
+  version      Int      @default(1)
+  parser       String?
+  language     String?
+  mimeType     String?  @map("mime_type")
+  contentText  String?  @map("content_text") @db.Text
+  charCount    Int?     @map("char_count")
+  tokenCount   Int?     @map("token_count")
+  metadataJson Json?    @map("metadata_json")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  source          Source           @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  case            Case             @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  owner           Profile          @relation("DocumentOwner", fields: [ownerUserId], references: [userId], onDelete: Cascade)
+  chunks          Chunk[]
+  reportCitations ReportCitation[]
+
+  @@unique([sourceId, version], map: "uq_documents_source_version")
+  @@index([caseId, createdAt(sort: Desc)], map: "idx_documents_case_created_desc")
+  @@index([ownerUserId, createdAt(sort: Desc)], map: "idx_documents_owner_created_desc")
+  @@map("documents")
+}
+
+model Chunk {
+  id           String                       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  documentId   String                       @map("document_id") @db.Uuid
+  caseId       String                       @map("case_id") @db.Uuid
+  ownerUserId  String                       @map("owner_user_id") @db.Uuid
+  chunkIndex   Int                          @map("chunk_index")
+  content      String                       @db.Text
+  tokenCount   Int?                         @map("token_count")
+  embedding    Unsupported("vector(1536)")?
+  metadataJson Json?                        @map("metadata_json")
+  createdAt    DateTime                     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  document        Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  case            Case             @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  owner           Profile          @relation("ChunkOwner", fields: [ownerUserId], references: [userId], onDelete: Cascade)
+  reportCitations ReportCitation[]
+
+  @@unique([documentId, chunkIndex], map: "uq_chunks_document_chunk_index")
+  @@index([caseId], map: "idx_chunks_case")
+  @@index([ownerUserId, createdAt(sort: Desc)], map: "idx_chunks_owner_created_desc")
+  @@map("chunks")
+}
+
+model Run {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  caseId            String    @map("case_id") @db.Uuid
+  ownerUserId       String    @map("owner_user_id") @db.Uuid
+  status            RunStatus @default(queued)
+  currentStep       String?   @map("current_step")
+  needsReview       Boolean   @default(false) @map("needs_review")
+  reviewSummary     String?   @map("review_summary") @db.Text
+  checkpointRef     String?   @map("checkpoint_ref")
+  checkpointAt      DateTime? @map("checkpoint_at") @db.Timestamptz(6)
+  triggeredByUserId String?   @map("triggered_by_user_id") @db.Uuid
+  approvedByUserId  String?   @map("approved_by_user_id") @db.Uuid
+  errorMessage      String?   @map("error_message") @db.Text
+  startedAt         DateTime  @default(now()) @map("started_at") @db.Timestamptz(6)
+  completedAt       DateTime? @map("completed_at") @db.Timestamptz(6)
+  durationMs        Int?      @map("duration_ms")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  approvedAt        DateTime? @map("approved_at") @db.Timestamptz(6)
+
+  case           Case            @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  owner          Profile         @relation("RunOwner", fields: [ownerUserId], references: [userId], onDelete: Cascade)
+  triggeredBy    Profile?        @relation("RunTriggeredBy", fields: [triggeredByUserId], references: [userId], onDelete: SetNull)
+  approvedBy     Profile?        @relation("RunApprovedBy", fields: [approvedByUserId], references: [userId], onDelete: SetNull)
+  steps          RunStep[]
+  artifacts      RunArtifact[]
+  reportVersions ReportVersion[]
+  jobs           Job[]
+
+  @@index([caseId, startedAt(sort: Desc)], map: "idx_runs_case_started_desc")
+  @@index([ownerUserId, status, startedAt(sort: Desc)], map: "idx_runs_owner_status_started_desc")
+  @@index([ownerUserId, needsReview, status], map: "idx_runs_owner_review_status")
+  @@map("runs")
+}
+
+model RunStep {
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  runId        String        @map("run_id") @db.Uuid
+  ownerUserId  String        @map("owner_user_id") @db.Uuid
+  stepKey      String        @map("step_key")
+  stepOrder    Int           @map("step_order")
+  status       RunStepStatus @default(queued)
+  goal         String?       @db.Text
+  inputJson    Json?         @map("input_json")
+  outputJson   Json?         @map("output_json")
+  errorMessage String?       @map("error_message") @db.Text
+  startedAt    DateTime?     @map("started_at") @db.Timestamptz(6)
+  completedAt  DateTime?     @map("completed_at") @db.Timestamptz(6)
+  durationMs   Int?          @map("duration_ms")
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  run   Run     @relation(fields: [runId], references: [id], onDelete: Cascade)
+  owner Profile @relation("RunStepOwner", fields: [ownerUserId], references: [userId], onDelete: Cascade)
+
+  @@unique([runId, stepOrder], map: "uq_run_steps_run_step_order")
+  @@index([runId, status], map: "idx_run_steps_run_status")
+  @@index([ownerUserId, createdAt(sort: Desc)], map: "idx_run_steps_owner_created_desc")
+  @@map("run_steps")
+}
+
+model RunArtifact {
+  id           String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  runId        String          @map("run_id") @db.Uuid
+  caseId       String          @map("case_id") @db.Uuid
+  ownerUserId  String          @map("owner_user_id") @db.Uuid
+  artifactType RunArtifactType @map("artifact_type")
+  title        String?
+  payloadJson  Json            @map("payload_json")
+  createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  run   Run     @relation(fields: [runId], references: [id], onDelete: Cascade)
+  case  Case    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  owner Profile @relation("RunArtifactOwner", fields: [ownerUserId], references: [userId], onDelete: Cascade)
+
+  @@index([runId, artifactType, createdAt(sort: Desc)], map: "idx_run_artifacts_run_type_created_desc")
+  @@index([caseId, createdAt(sort: Desc)], map: "idx_run_artifacts_case_created_desc")
+  @@map("run_artifacts")
+}
+
+model ReportVersion {
+  id              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  caseId          String              @map("case_id") @db.Uuid
+  runId           String?             @map("run_id") @db.Uuid
+  ownerUserId     String              @map("owner_user_id") @db.Uuid
+  versionNumber   Int                 @map("version_number")
+  status          ReportVersionStatus @default(draft)
+  title           String?
+  summary         String?             @db.Text
+  contentMarkdown String?             @map("content_markdown") @db.Text
+  citationsJson   Json?               @map("citations_json")
+  createdByUserId String?             @map("created_by_user_id") @db.Uuid
+  publishedAt     DateTime?           @map("published_at") @db.Timestamptz(6)
+  createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  archivedAt      DateTime?           @map("archived_at") @db.Timestamptz(6)
+
+  case      Case             @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  run       Run?             @relation(fields: [runId], references: [id], onDelete: SetNull)
+  owner     Profile          @relation("ReportVersionOwner", fields: [ownerUserId], references: [userId], onDelete: Cascade)
+  createdBy Profile?         @relation("ReportVersionCreatedBy", fields: [createdByUserId], references: [userId], onDelete: SetNull)
+  claims    ReportClaim[]
+  citations ReportCitation[]
+
+  @@unique([caseId, versionNumber], map: "uq_report_versions_case_version_number")
+  @@index([caseId, status, createdAt(sort: Desc)], map: "idx_report_versions_case_status_created_desc")
+  @@index([ownerUserId, createdAt(sort: Desc)], map: "idx_report_versions_owner_created_desc")
+  @@index([status, publishedAt], map: "idx_report_versions_status_published")
+  @@map("report_versions")
+}
+
+model ReportClaim {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reportVersionId String   @map("report_version_id") @db.Uuid
+  ownerUserId     String   @map("owner_user_id") @db.Uuid
+  claimIndex      Int      @map("claim_index")
+  section         String?
+  claimText       String   @map("claim_text") @db.Text
+  supportScore    Decimal? @map("support_score") @db.Decimal(5, 2)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  reportVersion ReportVersion    @relation(fields: [reportVersionId], references: [id], onDelete: Cascade)
+  owner         Profile          @relation("ReportClaimOwner", fields: [ownerUserId], references: [userId], onDelete: Cascade)
+  citations     ReportCitation[]
+
+  @@unique([reportVersionId, claimIndex], map: "uq_report_claims_report_claim_index")
+  @@index([reportVersionId, section], map: "idx_report_claims_report_section")
+  @@map("report_claims")
+}
+
+model ReportCitation {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reportVersionId String   @map("report_version_id") @db.Uuid
+  ownerUserId     String   @map("owner_user_id") @db.Uuid
+  claimId         String?  @map("claim_id") @db.Uuid
+  sourceId        String   @map("source_id") @db.Uuid
+  documentId      String?  @map("document_id") @db.Uuid
+  chunkId         String?  @map("chunk_id") @db.Uuid
+  citationLabel   String?  @map("citation_label")
+  excerpt         String?  @db.Text
+  locationJson    Json?    @map("location_json")
+  confidence      Decimal? @db.Decimal(5, 2)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  reportVersion ReportVersion @relation(fields: [reportVersionId], references: [id], onDelete: Cascade)
+  owner         Profile       @relation("ReportCitationOwner", fields: [ownerUserId], references: [userId], onDelete: Cascade)
+  claim         ReportClaim?  @relation(fields: [claimId], references: [id], onDelete: SetNull)
+  source        Source        @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  document      Document?     @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  chunk         Chunk?        @relation(fields: [chunkId], references: [id], onDelete: SetNull)
+
+  @@index([reportVersionId], map: "idx_report_citations_report_version")
+  @@index([sourceId], map: "idx_report_citations_source")
+  @@index([chunkId], map: "idx_report_citations_chunk")
+  @@map("report_citations")
+}
+
+model IngestionAttempt {
+  id           String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sourceId     String                 @map("source_id") @db.Uuid
+  caseId       String                 @map("case_id") @db.Uuid
+  ownerUserId  String                 @map("owner_user_id") @db.Uuid
+  attemptNo    Int                    @map("attempt_no")
+  status       IngestionAttemptStatus @default(queued)
+  stage        IngestionStage?
+  errorMessage String?                @map("error_message") @db.Text
+  metricsJson  Json?                  @map("metrics_json")
+  startedAt    DateTime?              @map("started_at") @db.Timestamptz(6)
+  finishedAt   DateTime?              @map("finished_at") @db.Timestamptz(6)
+  createdAt    DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  source Source  @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  case   Case    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  owner  Profile @relation("IngestionAttemptOwner", fields: [ownerUserId], references: [userId], onDelete: Cascade)
+
+  @@unique([sourceId, attemptNo], map: "uq_ingestion_attempts_source_attempt_no")
+  @@index([sourceId, status, startedAt(sort: Desc)], map: "idx_ingestion_attempts_source_status_started_desc")
+  @@index([ownerUserId, createdAt(sort: Desc)], map: "idx_ingestion_attempts_owner_created_desc")
+  @@map("ingestion_attempts")
+}
+
+model Job {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ownerUserId String    @map("owner_user_id") @db.Uuid
+  caseId      String?   @map("case_id") @db.Uuid
+  sourceId    String?   @map("source_id") @db.Uuid
+  runId       String?   @map("run_id") @db.Uuid
+  jobType     JobType   @map("job_type")
+  status      JobStatus @default(queued)
+  priority    Int       @default(100)
+  payloadJson Json?     @map("payload_json")
+  scheduledAt DateTime  @default(now()) @map("scheduled_at") @db.Timestamptz(6)
+  lockedAt    DateTime? @map("locked_at") @db.Timestamptz(6)
+  finishedAt  DateTime? @map("finished_at") @db.Timestamptz(6)
+  workerId    String?   @map("worker_id")
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3) @map("max_attempts")
+  lastError   String?   @map("last_error") @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  owner  Profile @relation("JobOwner", fields: [ownerUserId], references: [userId], onDelete: Cascade)
+  case   Case?   @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  source Source? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  run    Run?    @relation(fields: [runId], references: [id], onDelete: SetNull)
+
+  @@index([status, scheduledAt], map: "idx_jobs_status_scheduled")
+  @@index([ownerUserId, status, createdAt(sort: Desc)], map: "idx_jobs_owner_status_created_desc")
+  @@index([jobType, status, scheduledAt], map: "idx_jobs_type_status_scheduled")
+  @@map("jobs")
+}
+
+model AuditLog {
+  id          String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ownerUserId String          @map("owner_user_id") @db.Uuid
+  entityType  AuditEntityType @map("entity_type")
+  entityId    String          @map("entity_id")
+  action      AuditActionType
+  actorUserId String?         @map("actor_user_id") @db.Uuid
+  changesJson Json?           @map("changes_json")
+  ipAddress   String?         @map("ip_address") @db.Inet
+  userAgent   String?         @map("user_agent")
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  owner Profile  @relation("AuditLogOwner", fields: [ownerUserId], references: [userId], onDelete: Cascade)
+  actor Profile? @relation("AuditLogActor", fields: [actorUserId], references: [userId], onDelete: SetNull)
+
+  @@index([ownerUserId, createdAt(sort: Desc)], map: "idx_audit_logs_owner_created_desc")
+  @@index([entityType, entityId, createdAt(sort: Desc)], map: "idx_audit_logs_entity_created_desc")
+  @@map("audit_logs")
 }
