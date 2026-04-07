@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
-interface MacroCardProps extends React.ComponentProps<"section"> {
+interface MacroCardProps extends React.ComponentPropsWithoutRef<"div"> {
   title?: string;
   description?: string;
   action?: React.ReactNode;
@@ -19,7 +19,6 @@ export default function MacroCard({
 }: MacroCardProps) {
   return (
     <Card
-      asChild={false}
       className={cn("rounded-[28px] py-0 shadow-sm ring-1 ring-black/5", className)}
       {...props}
     >
