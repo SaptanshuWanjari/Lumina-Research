@@ -7,9 +7,11 @@ This document provides step-by-step instructions for implementing the remaining 
 You already have the core FastAPI structure (`main.py`, `config.py`, `security.py`, `database.py`) and the `cases` router. Here is how to implement the rest.
 
 ### 1. Sources Router (`app/api/endpoints/sources.py`)
+
 This router handles document uploads for specific cases.
 
 **Requirements:**
+
 - **Endpoint:** `POST /cases/{case_id}/sources`
 - **Logic:**
   1. Validate that `case_id` belongs to `owner_user_id` (via Supabase client).
@@ -19,9 +21,11 @@ This router handles document uploads for specific cases.
   5. Enqueue a job to the Worker service to process/chunk the document.
 
 ### 2. Runs Router (`app/api/endpoints/runs.py`)
+
 This router handles triggering the LangGraph research runs.
 
 **Requirements:**
+
 - **Endpoint:** `POST /cases/{case_id}/runs`
 - **Logic:**
   1. Validate ownership of `case_id`.
@@ -37,11 +41,14 @@ This router handles triggering the LangGraph research runs.
 The worker service is responsible for heavy asynchronous tasks, specifically document ingestion and chunking (RAG preparation).
 
 ### 1. Setup
-- Use `celery`, `arq`, or a simple `asyncio` task queue. 
+
+- Use `celery`, `arq`, or a simple `asyncio` task queue.
 - Ensure `pydantic-settings` and `supabase` are installed.
 
 ### 2. Ingestion Task (`tasks/ingestion.py`)
+
 **Requirements:**
+
 - Input: `source_id`
 - Logic:
   1. Fetch the source record and file from Supabase Storage.
@@ -58,7 +65,9 @@ The worker service is responsible for heavy asynchronous tasks, specifically doc
 This service runs the complex multi-agent reasoning loops.
 
 ### 1. Core LangGraph Setup (`graph.py`)
+
 **Requirements:**
+
 - Define the state: `TypedDict` containing `messages`, `case_id`, `run_id`, `extracted_facts`, `report_draft`.
 - Define nodes:
   - `planner`: Creates a research plan based on case settings.
@@ -68,10 +77,12 @@ This service runs the complex multi-agent reasoning loops.
   - `human_review`: A "Wait" node that pauses execution until human approval.
 
 ### 2. Postgres Checkpointer
+
 - Use `langgraph-checkpoint-postgres` to save the state of the graph.
 - This allows the graph to pause at the `human_review` node and be resumed via an API call from the FastAPI service once the user approves the draft in the Next.js frontend.
 
 ### 3. Execution Wrapper (`main.py`)
+
 - Set up a consumer (similar to the worker service) that listens for new runs.
 - When triggered, invoke the LangGraph workflow using `app.invoke(input_state, config={"configurable": {"thread_id": run_id}})`.
 - Update the `runs` table status in Supabase as the graph progresses (e.g., `running`, `awaiting_review`, `completed`).
@@ -79,6 +90,7 @@ This service runs the complex multi-agent reasoning loops.
 ---
 
 ## Critical Rule: RLS & Ownership
+
 Whenever you write database queries using the Supabase Service Role key in Python, you MUST include `.eq('owner_user_id', user_id)`:
 
 ```python

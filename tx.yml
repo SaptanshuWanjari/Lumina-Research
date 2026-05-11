@@ -1,0 +1,21 @@
+session: dev
+
+windows:
+  - name: editor
+    panes:
+      - cwd: .
+        cmd: n .
+
+  - name: website
+    split: vertical
+    panes:
+      - cwd: ./apps/website
+        cmd: npm run dev
+
+  - name: python
+    split: vertical
+    panes:
+      - cwd: ./services/worker
+        cmd: python main.py
+      - cwd: ./services/api
+        cmd: python main.py

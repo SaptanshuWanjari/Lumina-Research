@@ -158,13 +158,22 @@ export default function AuthShell({ variant }: AuthShellProps) {
                 </p>
 
                 <div className="mt-8 flex items-center justify-center gap-6 text-xs font-medium text-slate-500">
-                  <Link href="#" className="cursor-pointer hover:text-slate-900 hover:underline">
+                  <Link
+                    href="#"
+                    className="cursor-pointer hover:text-slate-900 hover:underline"
+                  >
                     Privacy
                   </Link>
-                  <Link href="#" className="cursor-pointer hover:text-slate-900 hover:underline">
+                  <Link
+                    href="#"
+                    className="cursor-pointer hover:text-slate-900 hover:underline"
+                  >
                     Terms
                   </Link>
-                  <Link href="#" className="cursor-pointer hover:text-slate-900 hover:underline">
+                  <Link
+                    href="#"
+                    className="cursor-pointer hover:text-slate-900 hover:underline"
+                  >
                     Status
                   </Link>
                 </div>

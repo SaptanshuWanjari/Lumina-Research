@@ -18,19 +18,15 @@ def get_current_user(
 ) -> TokenPayload:
     token = credentials.credentials
     try:
-        # Supabase uses HS256 by default for its JWTs
         payload = jwt.decode(
             token,
             settings.SUPABASE_JWT_SECRET,
             algorithms=["HS256"],
-            options={
-                "verify_aud": False
-            },  # Supabase tokens usually have aud="authenticated" but we can skip checking aud if we just care about signature
+            options={"verify_aud": False},
         )
 
         token_data = TokenPayload(**payload)
 
-        # Optionally ensure it's an authenticated user from Supabase
         if token_data.role != "authenticated":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

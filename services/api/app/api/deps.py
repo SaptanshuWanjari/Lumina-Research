@@ -1,0 +1,15 @@
+from fastapi import Depends
+from supabase import Client
+
+from app.core.database import get_supabase
+from app.core.security import get_current_user, TokenPayload
+
+
+def get_db() -> Client:
+    return get_supabase()
+
+
+def get_user(
+    current_user: TokenPayload = Depends(get_current_user),
+) -> TokenPayload:
+    return current_user

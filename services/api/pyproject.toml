@@ -11,6 +11,10 @@ dependencies = [
     "pydantic-settings>=2.13.1",
     "python-dotenv>=1.2.2",
     "python-jose>=3.5.0",
+    "python-multipart>=0.0.20",
+    "pytest>=8.3.3",
+    "celery>=5.4.0",
+    "redis>=5.0.4",
     "supabase>=2.28.3",
     "uvicorn>=0.43.0",
 ]

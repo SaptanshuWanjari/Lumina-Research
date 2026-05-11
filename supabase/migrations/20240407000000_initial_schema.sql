@@ -1,179 +1,261 @@
--- Enable necessary extensions
-CREATE EXTENSION IF NOT EXISTS "vector" WITH SCHEMA "extensions";
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
 
--- Enums
-CREATE TYPE case_status AS ENUM ('draft', 'ingesting', 'indexed', 'analyzing', 'review', 'published', 'failed', 'archived');
-CREATE TYPE source_type AS ENUM ('url', 'file', 'note');
-CREATE TYPE source_status AS ENUM ('pending', 'fetching', 'extracting', 'chunking', 'embedding', 'indexed', 'failed', 'archived');
-CREATE TYPE run_status AS ENUM ('queued', 'running', 'needs_review', 'resuming', 'complete', 'failed', 'cancelled');
-CREATE TYPE report_status AS ENUM ('draft', 'published', 'archived');
-
--- 1. Profiles (mirrors auth.users)
-CREATE TABLE profiles (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    email TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+CREATE TABLE public.audit_logs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  owner_user_id uuid NOT NULL,
+  entity_type USER-DEFINED NOT NULL,
+  entity_id text NOT NULL,
+  action USER-DEFINED NOT NULL,
+  actor_user_id uuid,
+  changes_json jsonb,
+  ip_address inet,
+  user_agent text,
+  created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT audit_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT audit_logs_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.profiles(user_id),
+  CONSTRAINT audit_logs_actor_user_id_fkey FOREIGN KEY (actor_user_id) REFERENCES public.profiles(user_id)
 );
-
--- 2. Cases
-CREATE TABLE cases (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    owner_user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-    title TEXT NOT NULL,
-    question TEXT,
-    status case_status NOT NULL DEFAULT 'draft',
-    priority INT DEFAULT 0,
-    tags TEXT[] DEFAULT '{}',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    archived_at TIMESTAMPTZ
+CREATE TABLE public.cases (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  owner_user_id uuid NOT NULL,
+  title text NOT NULL,
+  question text,
+  summary text,
+  status USER-DEFINED NOT NULL DEFAULT 'draft'::"CaseStatus",
+  priority USER-DEFINED NOT NULL DEFAULT 'normal'::"CasePriority",
+  tags ARRAY DEFAULT ARRAY[]::text[],
+  last_ingested_at timestamp with time zone,
+  last_run_at timestamp with time zone,
+  last_published_at timestamp with time zone,
+  created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone NOT NULL,
+  archived_at timestamp with time zone,
+  CONSTRAINT cases_pkey PRIMARY KEY (id),
+  CONSTRAINT cases_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.profiles(user_id)
 );
-
--- 3. Sources
-CREATE TABLE sources (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    case_id UUID NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
-    owner_user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-    source_type source_type NOT NULL,
-    url TEXT,
-    storage_path TEXT,
-    note_text TEXT,
-    status source_status NOT NULL DEFAULT 'pending',
-    error_message TEXT,
-    content_hash TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+CREATE TABLE public.chunks (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  document_id uuid NOT NULL,
+  case_id uuid NOT NULL,
+  owner_user_id uuid NOT NULL,
+  chunk_index integer NOT NULL,
+  content text NOT NULL,
+  token_count integer,
+  embedding USER-DEFINED,
+  metadata_json jsonb,
+  created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT chunks_pkey PRIMARY KEY (id),
+  CONSTRAINT chunks_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id),
+  CONSTRAINT chunks_case_id_fkey FOREIGN KEY (case_id) REFERENCES public.cases(id),
+  CONSTRAINT chunks_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.profiles(user_id)
 );
-
--- 4. Documents (Normalized content from sources)
-CREATE TABLE documents (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    source_id UUID NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
-    case_id UUID NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
-    owner_user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-    content TEXT NOT NULL,
-    metadata_json JSONB DEFAULT '{}'::jsonb,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+CREATE TABLE public.documents (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  source_id uuid NOT NULL,
+  case_id uuid NOT NULL,
+  owner_user_id uuid NOT NULL,
+  version integer NOT NULL DEFAULT 1,
+  parser text,
+  language text,
+  mime_type text,
+  content_text text,
+  char_count integer,
+  token_count integer,
+  metadata_json jsonb,
+  created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone NOT NULL,
+  CONSTRAINT documents_pkey PRIMARY KEY (id),
+  CONSTRAINT documents_source_id_fkey FOREIGN KEY (source_id) REFERENCES public.sources(id),
+  CONSTRAINT documents_case_id_fkey FOREIGN KEY (case_id) REFERENCES public.cases(id),
+  CONSTRAINT documents_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.profiles(user_id)
 );
-
--- 5. Chunks (Vector storage)
-CREATE TABLE chunks (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
-    case_id UUID NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
-    owner_user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-    chunk_index INT NOT NULL,
-    content TEXT NOT NULL,
-    token_count INT NOT NULL DEFAULT 0,
-    embedding extensions.vector(1536), -- Assuming OpenAI ada-002 or similar
-    metadata_json JSONB DEFAULT '{}'::jsonb,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+CREATE TABLE public.ingestion_attempts (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  source_id uuid NOT NULL,
+  case_id uuid NOT NULL,
+  owner_user_id uuid NOT NULL,
+  attempt_no integer NOT NULL,
+  status USER-DEFINED NOT NULL DEFAULT 'queued'::"IngestionAttemptStatus",
+  stage USER-DEFINED,
+  error_message text,
+  metrics_json jsonb,
+  started_at timestamp with time zone,
+  finished_at timestamp with time zone,
+  created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone NOT NULL,
+  CONSTRAINT ingestion_attempts_pkey PRIMARY KEY (id),
+  CONSTRAINT ingestion_attempts_source_id_fkey FOREIGN KEY (source_id) REFERENCES public.sources(id),
+  CONSTRAINT ingestion_attempts_case_id_fkey FOREIGN KEY (case_id) REFERENCES public.cases(id),
+  CONSTRAINT ingestion_attempts_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.profiles(user_id)
 );
-
--- 6. Runs (LangGraph workflow instances)
-CREATE TABLE runs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    case_id UUID NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
-    owner_user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-    status run_status NOT NULL DEFAULT 'queued',
-    current_step TEXT,
-    needs_review BOOLEAN NOT NULL DEFAULT FALSE,
-    checkpoint_ref TEXT,
-    checkpoint_at TIMESTAMPTZ,
-    started_at TIMESTAMPTZ,
-    completed_at TIMESTAMPTZ,
-    error_message TEXT,
-    approved_by_user_id UUID REFERENCES profiles(id),
-    approved_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+CREATE TABLE public.jobs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  owner_user_id uuid NOT NULL,
+  case_id uuid,
+  source_id uuid,
+  run_id uuid,
+  job_type USER-DEFINED NOT NULL,
+  status USER-DEFINED NOT NULL DEFAULT 'queued'::"JobStatus",
+  priority integer NOT NULL DEFAULT 100,
+  payload_json jsonb,
+  scheduled_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  locked_at timestamp with time zone,
+  finished_at timestamp with time zone,
+  worker_id text,
+  attempts integer NOT NULL DEFAULT 0,
+  max_attempts integer NOT NULL DEFAULT 3,
+  last_error text,
+  created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone NOT NULL,
+  CONSTRAINT jobs_pkey PRIMARY KEY (id),
+  CONSTRAINT jobs_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.profiles(user_id),
+  CONSTRAINT jobs_case_id_fkey FOREIGN KEY (case_id) REFERENCES public.cases(id),
+  CONSTRAINT jobs_source_id_fkey FOREIGN KEY (source_id) REFERENCES public.sources(id),
+  CONSTRAINT jobs_run_id_fkey FOREIGN KEY (run_id) REFERENCES public.runs(id)
 );
-
--- 7. Run Steps (Trace logs)
-CREATE TABLE run_steps (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    run_id UUID NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
-    node_name TEXT NOT NULL,
-    status TEXT NOT NULL,
-    duration_ms INT,
-    inputs_json JSONB,
-    outputs_json JSONB,
-    error_message TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+CREATE TABLE public.profiles (
+  user_id uuid NOT NULL,
+  email USER-DEFINED,
+  display_name text,
+  avatar_url text,
+  created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone NOT NULL,
+  CONSTRAINT profiles_pkey PRIMARY KEY (user_id)
 );
-
--- 8. Run Artifacts
-CREATE TABLE run_artifacts (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    run_id UUID NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
-    run_step_id UUID REFERENCES run_steps(id) ON DELETE CASCADE,
-    artifact_type TEXT NOT NULL,
-    content_json JSONB NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+CREATE TABLE public.report_citations (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  report_version_id uuid NOT NULL,
+  owner_user_id uuid NOT NULL,
+  claim_id uuid,
+  source_id uuid NOT NULL,
+  document_id uuid,
+  chunk_id uuid,
+  citation_label text,
+  excerpt text,
+  location_json jsonb,
+  confidence numeric,
+  created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT report_citations_pkey PRIMARY KEY (id),
+  CONSTRAINT report_citations_report_version_id_fkey FOREIGN KEY (report_version_id) REFERENCES public.report_versions(id),
+  CONSTRAINT report_citations_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.profiles(user_id),
+  CONSTRAINT report_citations_claim_id_fkey FOREIGN KEY (claim_id) REFERENCES public.report_claims(id),
+  CONSTRAINT report_citations_source_id_fkey FOREIGN KEY (source_id) REFERENCES public.sources(id),
+  CONSTRAINT report_citations_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id),
+  CONSTRAINT report_citations_chunk_id_fkey FOREIGN KEY (chunk_id) REFERENCES public.chunks(id)
 );
-
--- 9. Report Versions
-CREATE TABLE report_versions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    case_id UUID NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
-    run_id UUID REFERENCES runs(id) ON DELETE SET NULL,
-    owner_user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-    version_number INT NOT NULL DEFAULT 1,
-    status report_status NOT NULL DEFAULT 'draft',
-    content_markdown TEXT NOT NULL,
-    citations_json JSONB DEFAULT '[]'::jsonb,
-    published_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+CREATE TABLE public.report_claims (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  report_version_id uuid NOT NULL,
+  owner_user_id uuid NOT NULL,
+  claim_index integer NOT NULL,
+  section text,
+  claim_text text NOT NULL,
+  support_score numeric,
+  created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone NOT NULL,
+  CONSTRAINT report_claims_pkey PRIMARY KEY (id),
+  CONSTRAINT report_claims_report_version_id_fkey FOREIGN KEY (report_version_id) REFERENCES public.report_versions(id),
+  CONSTRAINT report_claims_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.profiles(user_id)
 );
-
--- 10. Jobs (Background worker queue)
-CREATE TABLE jobs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    type TEXT NOT NULL,
-    payload JSONB NOT NULL,
-    status TEXT NOT NULL DEFAULT 'pending',
-    error_message TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+CREATE TABLE public.report_versions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  case_id uuid NOT NULL,
+  run_id uuid,
+  owner_user_id uuid NOT NULL,
+  version_number integer NOT NULL,
+  status USER-DEFINED NOT NULL DEFAULT 'draft'::"ReportVersionStatus",
+  title text,
+  summary text,
+  content_markdown text,
+  citations_json jsonb,
+  created_by_user_id uuid,
+  published_at timestamp with time zone,
+  created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone NOT NULL,
+  archived_at timestamp with time zone,
+  CONSTRAINT report_versions_pkey PRIMARY KEY (id),
+  CONSTRAINT report_versions_case_id_fkey FOREIGN KEY (case_id) REFERENCES public.cases(id),
+  CONSTRAINT report_versions_run_id_fkey FOREIGN KEY (run_id) REFERENCES public.runs(id),
+  CONSTRAINT report_versions_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.profiles(user_id),
+  CONSTRAINT report_versions_created_by_user_id_fkey FOREIGN KEY (created_by_user_id) REFERENCES public.profiles(user_id)
 );
-
--- Set up basic indexes for performance
-CREATE INDEX idx_cases_owner ON cases(owner_user_id);
-CREATE INDEX idx_sources_case ON sources(case_id);
-CREATE INDEX idx_sources_owner ON sources(owner_user_id);
-CREATE INDEX idx_chunks_document ON chunks(document_id);
-CREATE INDEX idx_chunks_case ON chunks(case_id);
-CREATE INDEX idx_runs_case ON runs(case_id);
-CREATE INDEX idx_report_versions_case ON report_versions(case_id);
-
--- Trigger to create profile on user signup
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger AS $$
-BEGIN
-  INSERT INTO public.profiles (id, email)
-  VALUES (new.id, new.email);
-  RETURN new;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
-
--- Trigger for updated_at timestamps
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
-
-CREATE TRIGGER update_cases_updated_at BEFORE UPDATE ON cases FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
-CREATE TRIGGER update_sources_updated_at BEFORE UPDATE ON sources FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
-CREATE TRIGGER update_documents_updated_at BEFORE UPDATE ON documents FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
-CREATE TRIGGER update_runs_updated_at BEFORE UPDATE ON runs FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
-CREATE TRIGGER update_jobs_updated_at BEFORE UPDATE ON jobs FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+CREATE TABLE public.run_artifacts (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  run_id uuid NOT NULL,
+  case_id uuid NOT NULL,
+  owner_user_id uuid NOT NULL,
+  artifact_type USER-DEFINED NOT NULL,
+  title text,
+  payload_json jsonb NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT run_artifacts_pkey PRIMARY KEY (id),
+  CONSTRAINT run_artifacts_run_id_fkey FOREIGN KEY (run_id) REFERENCES public.runs(id),
+  CONSTRAINT run_artifacts_case_id_fkey FOREIGN KEY (case_id) REFERENCES public.cases(id),
+  CONSTRAINT run_artifacts_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.profiles(user_id)
+);
+CREATE TABLE public.run_steps (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  run_id uuid NOT NULL,
+  owner_user_id uuid NOT NULL,
+  step_key text NOT NULL,
+  step_order integer NOT NULL,
+  status USER-DEFINED NOT NULL DEFAULT 'queued'::"RunStepStatus",
+  goal text,
+  input_json jsonb,
+  output_json jsonb,
+  error_message text,
+  started_at timestamp with time zone,
+  completed_at timestamp with time zone,
+  duration_ms integer,
+  created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone NOT NULL,
+  CONSTRAINT run_steps_pkey PRIMARY KEY (id),
+  CONSTRAINT run_steps_run_id_fkey FOREIGN KEY (run_id) REFERENCES public.runs(id),
+  CONSTRAINT run_steps_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.profiles(user_id)
+);
+CREATE TABLE public.runs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  case_id uuid NOT NULL,
+  owner_user_id uuid NOT NULL,
+  status USER-DEFINED NOT NULL DEFAULT 'queued'::"RunStatus",
+  current_step text,
+  needs_review boolean NOT NULL DEFAULT false,
+  review_summary text,
+  checkpoint_ref text,
+  checkpoint_at timestamp with time zone,
+  triggered_by_user_id uuid,
+  approved_by_user_id uuid,
+  error_message text,
+  started_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  completed_at timestamp with time zone,
+  duration_ms integer,
+  created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone NOT NULL,
+  approved_at timestamp with time zone,
+  CONSTRAINT runs_pkey PRIMARY KEY (id),
+  CONSTRAINT runs_case_id_fkey FOREIGN KEY (case_id) REFERENCES public.cases(id),
+  CONSTRAINT runs_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.profiles(user_id),
+  CONSTRAINT runs_triggered_by_user_id_fkey FOREIGN KEY (triggered_by_user_id) REFERENCES public.profiles(user_id),
+  CONSTRAINT runs_approved_by_user_id_fkey FOREIGN KEY (approved_by_user_id) REFERENCES public.profiles(user_id)
+);
+CREATE TABLE public.sources (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  case_id uuid NOT NULL,
+  owner_user_id uuid NOT NULL,
+  source_type USER-DEFINED NOT NULL,
+  title text,
+  url text,
+  storage_path text,
+  note_text text,
+  content_hash text,
+  status USER-DEFINED NOT NULL DEFAULT 'pending'::"SourceStatus",
+  error_message text,
+  metadata_json jsonb,
+  created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone NOT NULL,
+  archived_at timestamp with time zone,
+  CONSTRAINT sources_pkey PRIMARY KEY (id),
+  CONSTRAINT sources_case_id_fkey FOREIGN KEY (case_id) REFERENCES public.cases(id),
+  CONSTRAINT sources_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.profiles(user_id)
+);

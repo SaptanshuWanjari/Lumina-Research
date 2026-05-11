@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.security import get_current_user, TokenPayload
 from app.api.router import api_router
+from app.api.endpoints import health
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -21,9 +22,7 @@ if settings.BACKEND_CORS_ORIGINS:
     )
 
 
-@app.get("/health")
-def health_check():
-    return {"status": "ok", "version": settings.VERSION}
+app.include_router(health.router)
 
 
 @app.get("/api/v1/me")

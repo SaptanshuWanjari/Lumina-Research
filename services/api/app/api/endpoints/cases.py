@@ -2,9 +2,17 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from supabase import Client
 from typing import List
 
-from app.core.database import get_supabase
+from app.core.database import (
+    delete_by_owner,
+    ensure_case_owner,
+    get_supabase,
+    insert_row,
+    select_many_by_owner,
+    select_one_by_owner,
+    update_by_owner,
+)
 from app.core.security import get_current_user, TokenPayload
-from app.models.case import Case, CaseCreate, CaseUpdate
+from app.schemas.cases import Case, CaseCreate, CaseUpdate
 
 router = APIRouter()
 
@@ -21,12 +29,10 @@ def create_case(
     data = case_in.model_dump()
     data["owner_user_id"] = current_user.sub
 
-    response = supabase.table("cases").insert(data).execute()
-
-    if not response.data:
+    try:
+        return insert_row(supabase, "cases", data)
+    except RuntimeError:
         raise HTTPException(status_code=500, detail="Failed to create case")
-
-    return response.data[0]
 
 
 @router.get("/", response_model=List[Case])
@@ -37,13 +43,7 @@ def read_cases(
     """
     Retrieve all cases belonging to the current user.
     """
-    response = (
-        supabase.table("cases")
-        .select("*")
-        .eq("owner_user_id", current_user.sub)
-        .execute()
-    )
-    return response.data
+    return select_many_by_owner(supabase, "cases", current_user.sub)
 
 
 @router.get("/{case_id}", response_model=Case)
@@ -55,18 +55,11 @@ def read_case(
     """
     Retrieve a specific case by ID, ensuring the user owns it.
     """
-    response = (
-        supabase.table("cases")
-        .select("*")
-        .eq("id", case_id)
-        .eq("owner_user_id", current_user.sub)
-        .execute()
-    )
-
-    if not response.data:
+    record = select_one_by_owner(supabase, "cases", case_id, current_user.sub)
+    if not record:
         raise HTTPException(status_code=404, detail="Case not found or access denied")
 
-    return response.data[0]
+    return record
 
 
 @router.patch("/{case_id}", response_model=Case)
@@ -80,32 +73,19 @@ def update_case(
     Update a case, ensuring the user owns it.
     """
     # First ensure it exists and belongs to user
-    existing = (
-        supabase.table("cases")
-        .select("id")
-        .eq("id", case_id)
-        .eq("owner_user_id", current_user.sub)
-        .execute()
-    )
-    if not existing.data:
+    if not ensure_case_owner(supabase, case_id, current_user.sub):
         raise HTTPException(status_code=404, detail="Case not found or access denied")
 
     update_data = case_in.model_dump(exclude_unset=True)
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields provided for update")
 
-    response = (
-        supabase.table("cases")
-        .update(update_data)
-        .eq("id", case_id)
-        .eq("owner_user_id", current_user.sub)
-        .execute()
-    )
-
-    if not response.data:
+    try:
+        return update_by_owner(
+            supabase, "cases", case_id, current_user.sub, update_data
+        )
+    except RuntimeError:
         raise HTTPException(status_code=500, detail="Failed to update case")
-
-    return response.data[0]
 
 
 @router.delete("/{case_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -118,25 +98,10 @@ def delete_case(
     Delete a case, ensuring the user owns it.
     """
     # Verify ownership before deletion
-    existing = (
-        supabase.table("cases")
-        .select("id")
-        .eq("id", case_id)
-        .eq("owner_user_id", current_user.sub)
-        .execute()
-    )
-    if not existing.data:
+    if not ensure_case_owner(supabase, case_id, current_user.sub):
         raise HTTPException(status_code=404, detail="Case not found or access denied")
 
-    response = (
-        supabase.table("cases")
-        .delete()
-        .eq("id", case_id)
-        .eq("owner_user_id", current_user.sub)
-        .execute()
-    )
-
-    if not response.data:
+    if not delete_by_owner(supabase, "cases", case_id, current_user.sub):
         raise HTTPException(status_code=500, detail="Failed to delete case")
 
     return None

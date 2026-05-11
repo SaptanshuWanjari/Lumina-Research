@@ -1,9 +1,13 @@
-import os
-from supabase import create_client, Client
+from functools import lru_cache
+from typing import Any, Dict, Iterable, List, Optional
+
+from supabase import Client, create_client
+
 from app.core.config import settings
 
 
-def get_supabase() -> Client:
+@lru_cache(maxsize=1)
+def _supabase_client() -> Client:
     """
     Returns a configured Supabase client using the Service Role Key.
 
@@ -28,3 +32,129 @@ def get_supabase() -> Client:
         )
 
     return create_client(url, key)
+
+
+def get_supabase() -> Client:
+    return _supabase_client()
+
+
+def _response_data(response: Any) -> List[Dict[str, Any]]:
+    data = getattr(response, "data", None)
+    return data if isinstance(data, list) else []
+
+
+def ensure_case_owner(supabase: Client, case_id: str, owner_user_id: str) -> bool:
+    response = (
+        supabase.table("cases")
+        .select("id")
+        .eq("id", case_id)
+        .eq("owner_user_id", owner_user_id)
+        .execute()
+    )
+    return bool(_response_data(response))
+
+
+def select_many_by_owner(
+    supabase: Client, table: str, owner_user_id: str
+) -> List[Dict[str, Any]]:
+    response = (
+        supabase.table(table).select("*").eq("owner_user_id", owner_user_id).execute()
+    )
+    return _response_data(response)
+
+
+def select_many_by_owner_and_case(
+    supabase: Client, table: str, case_id: str, owner_user_id: str
+) -> List[Dict[str, Any]]:
+    response = (
+        supabase.table(table)
+        .select("*")
+        .eq("case_id", case_id)
+        .eq("owner_user_id", owner_user_id)
+        .execute()
+    )
+    return _response_data(response)
+
+
+def select_one_by_owner(
+    supabase: Client,
+    table: str,
+    id_value: str,
+    owner_user_id: str,
+    id_field: str = "id",
+) -> Optional[Dict[str, Any]]:
+    response = (
+        supabase.table(table)
+        .select("*")
+        .eq(id_field, id_value)
+        .eq("owner_user_id", owner_user_id)
+        .execute()
+    )
+    data = _response_data(response)
+    return data[0] if data else None
+
+
+def select_one_by_owner_and_case(
+    supabase: Client,
+    table: str,
+    id_value: str,
+    case_id: str,
+    owner_user_id: str,
+    id_field: str = "id",
+) -> Optional[Dict[str, Any]]:
+    response = (
+        supabase.table(table)
+        .select("*")
+        .eq(id_field, id_value)
+        .eq("case_id", case_id)
+        .eq("owner_user_id", owner_user_id)
+        .execute()
+    )
+    data = _response_data(response)
+    return data[0] if data else None
+
+
+def insert_row(supabase: Client, table: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    response = supabase.table(table).insert(data).execute()
+    rows = _response_data(response)
+    if not rows:
+        raise RuntimeError(f"Failed to insert row into {table}")
+    return rows[0]
+
+
+def update_by_owner(
+    supabase: Client,
+    table: str,
+    id_value: str,
+    owner_user_id: str,
+    data: Dict[str, Any],
+    id_field: str = "id",
+) -> Dict[str, Any]:
+    response = (
+        supabase.table(table)
+        .update(data)
+        .eq(id_field, id_value)
+        .eq("owner_user_id", owner_user_id)
+        .execute()
+    )
+    rows = _response_data(response)
+    if not rows:
+        raise RuntimeError(f"Failed to update row in {table}")
+    return rows[0]
+
+
+def delete_by_owner(
+    supabase: Client,
+    table: str,
+    id_value: str,
+    owner_user_id: str,
+    id_field: str = "id",
+) -> bool:
+    response = (
+        supabase.table(table)
+        .delete()
+        .eq(id_field, id_value)
+        .eq("owner_user_id", owner_user_id)
+        .execute()
+    )
+    return bool(_response_data(response))

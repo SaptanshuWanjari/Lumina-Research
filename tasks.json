@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "tasks": [
+    {
+      "name": "build",
+      "cwd": "./apps/website/",
+      "cmd": "npm run build ",
+      "terminal": "float",
+      "description": "production build "
+    },
+    {
+      "name": "dev",
+      "cwd": "./apps/website/",
+      "cmd": "npm run dev ",
+      "terminal": "buffer",
+      "description": "start dev server "
+    },
+    {
+      "name": "worker",
+      "cwd": "./services/worker/",
+      "cmd": "python run main.py ",
+      "terminal": "buffer",
+      "description": "start worker"
+    }
+  ]
+}
+
