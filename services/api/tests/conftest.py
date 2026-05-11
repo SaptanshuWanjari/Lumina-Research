@@ -98,14 +98,14 @@ class MockQuery:
             table_data = self.db_store.get(self.table_name, [])
             deleted = []
             remaining = []
-            
+
             for row in table_data:
                 match = all(row.get(k) == v for k, v in self.filters.items())
                 if match:
                     deleted.append(row)
                 else:
                     remaining.append(row)
-            
+
             self.db_store[self.table_name] = remaining
             return MockResponse(deleted)
 
@@ -150,10 +150,10 @@ class MockTable:
 
 class MockStorage:
     """Mock Supabase storage."""
-    
+
     def from_(self, bucket):
         return self
-    
+
     def upload(self, path, content, file_options=None):
         return MockResponse({"path": path})
 
@@ -190,7 +190,7 @@ def client(mock_supabase, monkeypatch):
 
     def _noop_upload(*args, **kwargs):
         return None
-    
+
     def _noop_send_task(*args, **kwargs):
         return None
 
@@ -202,12 +202,13 @@ def client(mock_supabase, monkeypatch):
     monkeypatch.setattr("app.services.queue.enqueue_ingestion", _noop_enqueue)
     monkeypatch.setattr("app.services.queue.enqueue_run", _noop_enqueue)
     monkeypatch.setattr("app.services.queue.enqueue_resume", _noop_enqueue)
-    
+
     # Mock storage to avoid Supabase storage errors
     monkeypatch.setattr("app.services.storage.upload_source_file", _noop_upload)
-    
+
     # Mock Celery app's send_task to avoid Redis connection attempts
     from app.services.queue import celery_app
+
     monkeypatch.setattr(celery_app, "send_task", _noop_send_task)
 
     with TestClient(app) as test_client:

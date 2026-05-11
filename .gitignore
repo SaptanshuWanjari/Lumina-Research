@@ -3,6 +3,7 @@
 ############################################
 
 node_modules/
+.ruff_cache/
 .pnpm-store/
 .turbo/
 .cache/
