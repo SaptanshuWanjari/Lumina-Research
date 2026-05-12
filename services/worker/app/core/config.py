@@ -1,44 +1,37 @@
-from functools import lru_cache
-import os
-from typing import Any
+from __future__ import annotations
 
-from pydantic import Field, field_validator
+import os
+from functools import lru_cache
+
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     SUPABASE_URL: str = "http://localhost:54321"
     SUPABASE_SERVICE_ROLE_KEY: str = ""
-    DATABASE_URL: str = ""
-    LANGGRAPH_CHECKPOINT_DB_URL: str = ""
+    SUPABASE_STORAGE_BUCKET: str = "sources"
 
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/1"
 
     GOOGLE_API_KEY: str = ""
-    GEMINI_PLANNER_MODEL: str = "gemini-2.5-pro"
-    GEMINI_ANALYZER_MODEL: str = "gemini-2.5-pro"
-    GEMINI_WRITER_MODEL: str = "gemini-2.5-pro"
     GEMINI_EMBEDDING_MODEL: str = "models/gemini-embedding-001"
     GEMINI_EMBEDDING_DIMENSIONS: int = 1536
 
-    RETRIEVAL_MATCH_THRESHOLD: float = 0.5
-    RETRIEVAL_MATCH_COUNT: int = 8
-    REPORT_TITLE_PREFIX: str = Field(default="Research Report")
+    WORKER_CHUNK_SIZE: int = Field(default=900, ge=200)
+    WORKER_CHUNK_OVERLAP: int = Field(default=120, ge=0)
+    WORKER_HTTP_TIMEOUT_SECONDS: float = Field(default=20.0, gt=0)
+    WORKER_MAX_URL_BYTES: int = Field(default=5_000_000, gt=0)
 
     LANGSMITH_TRACING: bool = False
     LANGSMITH_API_KEY: str = ""
-    LANGSMITH_PROJECT: str = "lumina-research-orchestrator"
+    LANGSMITH_PROJECT: str = "lumina-research-worker"
     LANGSMITH_ENDPOINT: str = "https://api.smith.langchain.com"
 
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", case_sensitive=True, extra="ignore"
     )
-
-    @field_validator("LANGGRAPH_CHECKPOINT_DB_URL")
-    @classmethod
-    def default_checkpoint_url(cls, value: str, info: Any) -> str:
-        return value or info.data.get("DATABASE_URL", "")
 
 
 @lru_cache(maxsize=1)

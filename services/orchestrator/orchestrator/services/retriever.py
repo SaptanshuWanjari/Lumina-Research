@@ -24,10 +24,17 @@ class SupabaseRetriever:
                 ) from exc
             if not settings.GOOGLE_API_KEY:
                 raise RuntimeError("GOOGLE_API_KEY is required for retrieval embeddings")
-            self._embedder = GoogleGenerativeAIEmbeddings(
-                model=settings.GEMINI_EMBEDDING_MODEL,
-                google_api_key=settings.GOOGLE_API_KEY,
-            )
+            kwargs = {
+                "model": settings.GEMINI_EMBEDDING_MODEL,
+                "api_key": settings.GOOGLE_API_KEY,
+            }
+            try:
+                self._embedder = GoogleGenerativeAIEmbeddings(
+                    **kwargs,
+                    output_dimensionality=settings.GEMINI_EMBEDDING_DIMENSIONS,
+                )
+            except TypeError:
+                self._embedder = GoogleGenerativeAIEmbeddings(**kwargs)
         return self._embedder
 
     def retrieve(
@@ -39,6 +46,11 @@ class SupabaseRetriever:
 
         for query in queries:
             embedding = embedder.embed_query(query)
+            if len(embedding) != settings.GEMINI_EMBEDDING_DIMENSIONS:
+                raise RuntimeError(
+                    "Retrieval embedding dimension mismatch: "
+                    f"got {len(embedding)}, expected {settings.GEMINI_EMBEDDING_DIMENSIONS}"
+                )
             rows = response_rows(
                 self.client.rpc(
                     "match_chunks",

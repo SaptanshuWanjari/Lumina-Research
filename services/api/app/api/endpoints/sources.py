@@ -90,6 +90,11 @@ async def create_source(
         "storage_path": storage_path,
         "status": "pending",
         "content_hash": content_hash,
+        "metadata_json": {
+            "filename": file.filename,
+            "mime_type": file.content_type,
+            "byte_size": len(content),
+        },
     }
 
     try:

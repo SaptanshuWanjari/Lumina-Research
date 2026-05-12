@@ -21,7 +21,7 @@ class GeminiService:
             raise RuntimeError("GOOGLE_API_KEY is required for Gemini orchestration")
         self.model = ChatGoogleGenerativeAI(
             model=model_name,
-            google_api_key=settings.GOOGLE_API_KEY,
+            api_key=settings.GOOGLE_API_KEY,
             temperature=0.2,
         )
 

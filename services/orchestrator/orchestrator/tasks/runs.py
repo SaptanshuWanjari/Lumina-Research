@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from langgraph.types import Command
 
 from orchestrator.core.celery_app import celery_app
+from orchestrator.core.config import configure_langsmith_env
 from orchestrator.core.database import (
     SupabaseRunStore,
     bootstrap_run,
@@ -13,6 +14,9 @@ from orchestrator.core.database import (
 )
 from orchestrator.graph.build import build_graph
 from orchestrator.services.checkpointer import postgres_checkpointer
+
+configure_langsmith_env()
+from langsmith import traceable
 
 
 def _duration_ms(started_at: str | None) -> int | None:
@@ -27,6 +31,11 @@ def _duration_ms(started_at: str | None) -> int | None:
 
 @celery_app.task(name="orchestrator.tasks.runs.start_run", bind=True)
 def start_run(self, run_id: str) -> dict[str, str]:
+    return _start_run(run_id)
+
+
+@traceable(name="orchestrator.start_run", run_type="chain")
+def _start_run(run_id: str) -> dict[str, str]:
     client = get_supabase()
     run = bootstrap_run(client, run_id)
     owner_user_id = run["owner_user_id"]
@@ -75,6 +84,11 @@ def start_run(self, run_id: str) -> dict[str, str]:
 
 @celery_app.task(name="orchestrator.tasks.runs.resume_run", bind=True)
 def resume_run(self, run_id: str) -> dict[str, str]:
+    return _resume_run(run_id)
+
+
+@traceable(name="orchestrator.resume_run", run_type="chain")
+def _resume_run(run_id: str) -> dict[str, str]:
     client = get_supabase()
     run = bootstrap_run(client, run_id)
     owner_user_id = run["owner_user_id"]
