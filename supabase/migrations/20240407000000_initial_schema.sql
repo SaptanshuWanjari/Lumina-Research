@@ -34,6 +34,41 @@ CREATE TABLE public.cases (
   CONSTRAINT cases_pkey PRIMARY KEY (id),
   CONSTRAINT cases_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.profiles(user_id)
 );
+CREATE TABLE public.checkpoint_blobs (
+  thread_id text NOT NULL,
+  checkpoint_ns text NOT NULL DEFAULT ''::text,
+  channel text NOT NULL,
+  version text NOT NULL,
+  type text NOT NULL,
+  blob bytea,
+  CONSTRAINT checkpoint_blobs_pkey PRIMARY KEY (thread_id, checkpoint_ns, channel, version)
+);
+CREATE TABLE public.checkpoint_migrations (
+  v integer NOT NULL,
+  CONSTRAINT checkpoint_migrations_pkey PRIMARY KEY (v)
+);
+CREATE TABLE public.checkpoint_writes (
+  thread_id text NOT NULL,
+  checkpoint_ns text NOT NULL DEFAULT ''::text,
+  checkpoint_id text NOT NULL,
+  task_id text NOT NULL,
+  idx integer NOT NULL,
+  channel text NOT NULL,
+  type text,
+  blob bytea NOT NULL,
+  task_path text NOT NULL DEFAULT ''::text,
+  CONSTRAINT checkpoint_writes_pkey PRIMARY KEY (thread_id, checkpoint_ns, checkpoint_id, task_id, idx)
+);
+CREATE TABLE public.checkpoints (
+  thread_id text NOT NULL,
+  checkpoint_ns text NOT NULL DEFAULT ''::text,
+  checkpoint_id text NOT NULL,
+  parent_checkpoint_id text,
+  type text,
+  checkpoint jsonb NOT NULL,
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  CONSTRAINT checkpoints_pkey PRIMARY KEY (thread_id, checkpoint_ns, checkpoint_id)
+);
 CREATE TABLE public.chunks (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   document_id uuid NOT NULL,

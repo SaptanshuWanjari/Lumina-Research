@@ -10,12 +10,24 @@ celery_app = Celery(
 
 
 def enqueue_ingestion(source_id: str) -> None:
-    celery_app.send_task(settings.WORKER_INGEST_TASK, args=[source_id])
+    celery_app.send_task(
+        settings.WORKER_INGEST_TASK,
+        args=[source_id],
+        queue=settings.WORKER_QUEUE_NAME,
+    )
 
 
 def enqueue_run(run_id: str) -> None:
-    celery_app.send_task(settings.ORCHESTRATOR_RUN_TASK, args=[run_id])
+    celery_app.send_task(
+        settings.ORCHESTRATOR_RUN_TASK,
+        args=[run_id],
+        queue=settings.ORCHESTRATOR_QUEUE_NAME,
+    )
 
 
 def enqueue_resume(run_id: str) -> None:
-    celery_app.send_task(settings.ORCHESTRATOR_RESUME_TASK, args=[run_id])
+    celery_app.send_task(
+        settings.ORCHESTRATOR_RESUME_TASK,
+        args=[run_id],
+        queue=settings.ORCHESTRATOR_QUEUE_NAME,
+    )

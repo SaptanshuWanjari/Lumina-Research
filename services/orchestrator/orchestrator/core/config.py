@@ -1,5 +1,5 @@
-from functools import lru_cache
 import os
+from functools import lru_cache
 from typing import Any
 
 from pydantic import Field, field_validator
@@ -7,18 +7,19 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    SUPABASE_URL: str = "http://localhost:54321"
+    SUPABASE_URL: str = "https://your-project-ref.supabase.co"
     SUPABASE_SERVICE_ROLE_KEY: str = ""
     DATABASE_URL: str = ""
     LANGGRAPH_CHECKPOINT_DB_URL: str = ""
 
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/1"
+    ORCHESTRATOR_QUEUE_NAME: str = "orchestrator"
 
     GOOGLE_API_KEY: str = ""
-    GEMINI_PLANNER_MODEL: str = "gemini-2.5-pro"
-    GEMINI_ANALYZER_MODEL: str = "gemini-2.5-pro"
-    GEMINI_WRITER_MODEL: str = "gemini-2.5-pro"
+    GEMINI_PLANNER_MODEL: str = "gemini-2.5-flash-lite"
+    GEMINI_ANALYZER_MODEL: str = "gemini-2.5-flash-lite"
+    GEMINI_WRITER_MODEL: str = "gemini-2.5-flash-lite"
     GEMINI_EMBEDDING_MODEL: str = "models/gemini-embedding-001"
     GEMINI_EMBEDDING_DIMENSIONS: int = 1536
 
@@ -51,7 +52,9 @@ settings = get_settings()
 
 def configure_langsmith_env() -> None:
     os.environ.setdefault("LANGSMITH_TRACING", str(settings.LANGSMITH_TRACING).lower())
-    os.environ.setdefault("LANGCHAIN_TRACING_V2", str(settings.LANGSMITH_TRACING).lower())
+    os.environ.setdefault(
+        "LANGCHAIN_TRACING_V2", str(settings.LANGSMITH_TRACING).lower()
+    )
     if settings.LANGSMITH_API_KEY:
         os.environ.setdefault("LANGSMITH_API_KEY", settings.LANGSMITH_API_KEY)
     if settings.LANGSMITH_PROJECT:

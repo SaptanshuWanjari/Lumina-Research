@@ -117,9 +117,20 @@ def select_one_by_owner_and_case(
 def insert_row(supabase: Client, table: str, data: Dict[str, Any]) -> Dict[str, Any]:
     response = supabase.table(table).insert(data).execute()
     rows = _response_data(response)
-    if not rows:
-        raise RuntimeError(f"Failed to insert row into {table}")
-    return rows[0]
+    if rows:
+        return rows[0]
+
+    row_id = data.get("id")
+    if row_id:
+        query = supabase.table(table).select("*").eq("id", row_id)
+        owner_user_id = data.get("owner_user_id")
+        if owner_user_id:
+            query = query.eq("owner_user_id", owner_user_id)
+        fallback_rows = _response_data(query.execute())
+        if fallback_rows:
+            return fallback_rows[0]
+
+    raise RuntimeError(f"Failed to insert row into {table}")
 
 
 def update_by_owner(
@@ -138,9 +149,20 @@ def update_by_owner(
         .execute()
     )
     rows = _response_data(response)
-    if not rows:
-        raise RuntimeError(f"Failed to update row in {table}")
-    return rows[0]
+    if rows:
+        return rows[0]
+
+    fallback_rows = _response_data(
+        supabase.table(table)
+        .select("*")
+        .eq(id_field, id_value)
+        .eq("owner_user_id", owner_user_id)
+        .execute()
+    )
+    if fallback_rows:
+        return fallback_rows[0]
+
+    raise RuntimeError(f"Failed to update row in {table}")
 
 
 def delete_by_owner(
@@ -150,6 +172,16 @@ def delete_by_owner(
     owner_user_id: str,
     id_field: str = "id",
 ) -> bool:
+    existing = _response_data(
+        supabase.table(table)
+        .select(id_field)
+        .eq(id_field, id_value)
+        .eq("owner_user_id", owner_user_id)
+        .execute()
+    )
+    if not existing:
+        return False
+
     response = (
         supabase.table(table)
         .delete()
@@ -157,4 +189,5 @@ def delete_by_owner(
         .eq("owner_user_id", owner_user_id)
         .execute()
     )
-    return bool(_response_data(response))
+    _response_data(response)
+    return True

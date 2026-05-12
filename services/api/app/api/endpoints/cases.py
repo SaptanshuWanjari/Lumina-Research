@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from supabase import Client
 from typing import List
+from uuid import uuid4
+from datetime import datetime, timezone
 
 from app.core.database import (
     delete_by_owner,
@@ -26,13 +28,17 @@ def create_case(
     """
     Create a new case for the current user.
     """
-    data = case_in.model_dump()
+    data = case_in.model_dump(exclude_none=True)
+    now = datetime.now(timezone.utc).isoformat()
+    data["id"] = str(uuid4())
     data["owner_user_id"] = current_user.sub
+    data["created_at"] = now
+    data["updated_at"] = now
 
     try:
         return insert_row(supabase, "cases", data)
-    except RuntimeError:
-        raise HTTPException(status_code=500, detail="Failed to create case")
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to create case: {exc}")
 
 
 @router.get("/", response_model=List[Case])
@@ -76,7 +82,7 @@ def update_case(
     if not ensure_case_owner(supabase, case_id, current_user.sub):
         raise HTTPException(status_code=404, detail="Case not found or access denied")
 
-    update_data = case_in.model_dump(exclude_unset=True)
+    update_data = case_in.model_dump(exclude_unset=True, exclude_none=True)
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields provided for update")
 

@@ -68,7 +68,7 @@ htmlcov/
 # SUPABASE
 ############################################
 
-# local supabase
+# supabase cli artifacts
 .supabase/
 supabase/.temp/
 

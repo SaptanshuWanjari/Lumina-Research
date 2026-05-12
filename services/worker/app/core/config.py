@@ -8,12 +8,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    SUPABASE_URL: str = "http://localhost:54321"
+    SUPABASE_URL: str = "https://your-project-ref.supabase.co"
     SUPABASE_SERVICE_ROLE_KEY: str = ""
     SUPABASE_STORAGE_BUCKET: str = "sources"
 
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/1"
+    WORKER_QUEUE_NAME: str = "worker"
 
     GOOGLE_API_KEY: str = ""
     GEMINI_EMBEDDING_MODEL: str = "models/gemini-embedding-001"

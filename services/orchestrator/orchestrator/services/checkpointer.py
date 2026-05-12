@@ -17,10 +17,19 @@ def postgres_checkpointer() -> Iterator[object]:
         raise RuntimeError(
             "langgraph-checkpoint-postgres is required for persistent graph state"
         ) from exc
+    try:
+        from psycopg import Connection
+        from psycopg.rows import dict_row
+    except ImportError as exc:
+        raise RuntimeError("psycopg is required for the Postgres checkpointer") from exc
 
-    with PostgresSaver.from_conn_string(
-        _psycopg_compatible_url(settings.LANGGRAPH_CHECKPOINT_DB_URL)
-    ) as saver:
+    with Connection.connect(
+        _psycopg_compatible_url(settings.LANGGRAPH_CHECKPOINT_DB_URL),
+        autocommit=True,
+        prepare_threshold=None,
+        row_factory=dict_row,
+    ) as conn:
+        saver = PostgresSaver(conn)
         saver.setup()
         yield saver
 

@@ -6,7 +6,7 @@ def main() -> None:
         [
             "worker",
             "--loglevel=INFO",
-            "--queues=celery",
+            f"--queues={celery_app.conf.task_default_queue}",
         ]
     )
 

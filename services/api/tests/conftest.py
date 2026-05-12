@@ -70,7 +70,7 @@ class MockQuery:
             if "status" not in data or data["status"] is None:
                 data["status"] = "draft"
             if "priority" not in data or data["priority"] is None:
-                data["priority"] = 0
+                data["priority"] = "normal"
             if "tags" not in data or data["tags"] is None:
                 data["tags"] = []
             if "archived_at" not in data:

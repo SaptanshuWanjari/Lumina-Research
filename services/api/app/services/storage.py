@@ -25,7 +25,7 @@ def upload_source_file(
 ) -> None:
     options = {
         "content-type": content_type or "application/octet-stream",
-        "upsert": True,
+        "upsert": "true",
     }
     result = supabase.storage.from_(bucket).upload(
         storage_path, content, file_options=options

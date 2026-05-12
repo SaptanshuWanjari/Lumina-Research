@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     API_PORT: int = 8000
 
     # Supabase settings for JWT validation
-    SUPABASE_URL: str = "http://localhost:54321" 
+    SUPABASE_URL: str = "https://your-project-ref.supabase.co"
     SUPABASE_SERVICE_ROLE_KEY: str = ""
     SUPABASE_JWT_SECRET: str = (
         "your-super-secret-jwt-token-with-at-least-32-characters-long" 
@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     # Queue settings (Celery + Redis)
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/1"
+    WORKER_QUEUE_NAME: str = "worker"
+    ORCHESTRATOR_QUEUE_NAME: str = "orchestrator"
     WORKER_INGEST_TASK: str = "worker.tasks.ingestion.process_source"
     ORCHESTRATOR_RUN_TASK: str = "orchestrator.tasks.runs.start_run"
     ORCHESTRATOR_RESUME_TASK: str = "orchestrator.tasks.runs.resume_run"

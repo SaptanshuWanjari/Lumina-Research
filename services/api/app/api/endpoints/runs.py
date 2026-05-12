@@ -44,12 +44,17 @@ def create_run(
         raise HTTPException(status_code=404, detail="Case not found or access denied")
 
     run_id = str(uuid4())
+    now = datetime.now(timezone.utc).isoformat()
     insert_data = {
         "id": run_id,
         "case_id": case_id,
         "owner_user_id": current_user.sub,
         "status": "queued",
         "needs_review": False,
+        "triggered_by_user_id": current_user.sub,
+        "created_at": now,
+        "updated_at": now,
+        "started_at": now,
     }
 
     try:

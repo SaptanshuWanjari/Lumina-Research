@@ -19,18 +19,30 @@ def normalize_text(text: str) -> str:
     return text.strip()
 
 
-def extract_file_text(content: bytes, filename: str | None, mime_type: str | None) -> tuple[str, str]:
+def extract_file_text(
+    content: bytes, filename: str | None, mime_type: str | None
+) -> tuple[str, str, str | None]:
     name = (filename or "").lower()
     mime = (mime_type or "").lower()
     if mime == "application/pdf" or name.endswith(".pdf"):
-        return normalize_text(extract_text(BytesIO(content))), "pdfminer-six"
+        return normalize_text(extract_text(BytesIO(content))), "pdfminer-six", (
+            mime_type or "application/pdf"
+        )
 
     for encoding in ("utf-8", "utf-16", "latin-1"):
         try:
-            return normalize_text(content.decode(encoding)), f"text-{encoding}"
+            return (
+                normalize_text(content.decode(encoding)),
+                f"text-{encoding}",
+                mime_type or "text/plain",
+            )
         except UnicodeDecodeError:
             continue
-    return normalize_text(content.decode("utf-8", errors="replace")), "text-replace"
+    return (
+        normalize_text(content.decode("utf-8", errors="replace")),
+        "text-replace",
+        mime_type or "text/plain",
+    )
 
 
 def extract_html_text(html: str) -> str:

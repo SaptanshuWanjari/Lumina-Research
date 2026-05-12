@@ -1,4 +1,5 @@
 import hashlib
+from datetime import datetime, timezone
 from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from supabase import Client
@@ -68,6 +69,7 @@ async def create_source(
         raise HTTPException(status_code=400, detail="Uploaded file is empty")
 
     source_id = str(uuid4())
+    now = datetime.now(timezone.utc).isoformat()
     storage_path = build_source_storage_path(case_id, source_id, file.filename or "")
     content_hash = hashlib.sha256(content).hexdigest()
 
@@ -90,6 +92,8 @@ async def create_source(
         "storage_path": storage_path,
         "status": "pending",
         "content_hash": content_hash,
+        "created_at": now,
+        "updated_at": now,
         "metadata_json": {
             "filename": file.filename,
             "mime_type": file.content_type,
