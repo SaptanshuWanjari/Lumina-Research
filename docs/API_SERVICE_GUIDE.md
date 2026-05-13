@@ -1,254 +1,97 @@
-# **API Service Implementation Guide (FastAPI)**
+# API Service Implementation Guide (Current)
 
-This guide is a full, in-depth reference for building the API layer in `services/api`. It covers **what the layer must contain**, **file layout**, **code flow**, **how to run it by itself**, and **how to test it with Postman-like tools**. Integration steps with Worker, Orchestrator, and the website are included at the end.
+This guide reflects the API implementation that is currently working with the smoke script and cloud Supabase.
 
----
+## Purpose
 
-## 1) Purpose of This Layer
+`services/api` is the synchronous gateway for the app. It validates user auth, enforces ownership, writes intent rows, uploads files, and enqueues background tasks. It does not perform heavy ingestion or orchestration work directly.
 
-The API service is the **front door** to the backend. It must be fast, secure, and predictable. It validates requests, enforces ownership rules, stores and retrieves data, and triggers background work. It should **never** do heavy processing itself.
-
----
-
-## 2) Required Files and Structure
-
-Expected structure inside `services/api` (minimum viable):
-
-```
-services/api/
-  pyproject.toml
-  README.md
-  main.py
-  app/
-    __init__.py
-    main.py
-    core/
-      config.py
-      security.py
-      database.py
-    api/
-      deps.py
-      endpoints/
-        cases.py
-        sources.py
-        runs.py
-        health.py
-    models/
-      cases.py
-      sources.py
-      runs.py
-    schemas/
-      cases.py
-      sources.py
-      runs.py
-```
-
-### What each file should do
-
-- `main.py` (root)
-  - Entrypoint. Should call `uvicorn app.main:app` or expose it.
-- `app/main.py`
-  - Creates the FastAPI app, includes routers, sets middleware.
-- `app/core/config.py`
-  - Loads environment variables (Supabase URL, keys, bucket names, queue URLs).
-- `app/core/security.py`
-  - Verifies JWT tokens from frontend requests.
-  - Extracts `user_id` and `email`.
-- `app/core/database.py`
-  - Initializes the Supabase client.
-  - Keeps a singleton for reuse.
-- `app/api/deps.py`
-  - Dependency injection helpers: get Supabase client, get current user.
-- `app/api/endpoints/*.py`
-  - Actual API routes.
-  - Each file groups a domain (cases, sources, runs, health).
-- `app/models/*.py`
-  - Internal data models (if needed).
-- `app/schemas/*.py`
-  - Pydantic request and response models.
-
----
-
-## 3) Core Endpoint Set
-
-These are the minimum endpoints the API service must expose:
-
-### Cases
-
-- `GET /cases`
-- `POST /cases`
-- `GET /cases/{case_id}`
-
-### Sources (Uploads)
-
-- `POST /cases/{case_id}/sources`
-  - Accepts `UploadFile`.
-  - Stores to Supabase Storage.
-  - Inserts row in `sources` table.
-  - Enqueues ingestion task.
-
-### Runs
-
-- `POST /cases/{case_id}/runs`
-  - Inserts a `run` row with `status = queued`.
-  - Enqueues orchestration task.
-- `GET /cases/{case_id}/runs/{run_id}`
-  - Returns run status.
-- `POST /runs/{run_id}/approve`
-  - Marks run as `resuming` and enqueues resume task.
-
-### Health
+## Current Endpoints
 
 - `GET /health`
-  - Returns `{ "status": "ok" }`.
+- `GET /api/v1/me`
+- `GET /api/v1/cases`
+- `POST /api/v1/cases`
+- `GET /api/v1/cases/{case_id}`
+- `PATCH /api/v1/cases/{case_id}`
+- `DELETE /api/v1/cases/{case_id}`
+- `GET /api/v1/cases/{case_id}/sources`
+- `GET /api/v1/cases/{case_id}/sources/{source_id}`
+- `POST /api/v1/cases/{case_id}/sources`
+- `GET /api/v1/cases/{case_id}/runs`
+- `GET /api/v1/cases/{case_id}/runs/{run_id}`
+- `POST /api/v1/cases/{case_id}/runs`
+- `POST /api/v1/runs/{run_id}/approve`
 
----
+## Authentication
 
-## 4) Required Code Flow
+Current auth behavior:
 
-### 4.1 Authentication Flow
+- first attempts HS256 decode with `SUPABASE_JWT_SECRET`
+- if that fails, falls back to `SUPABASE_URL/auth/v1/user` using the service-role key
 
-1. Frontend sends `Authorization: Bearer <jwt>`.
-2. `security.py` verifies the token.
-3. `deps.py` extracts `user_id` and injects into route handlers.
+This fallback matters for real cloud Supabase tokens and was validated during manual smoke testing.
 
-### 4.2 Ownership Enforcement (Critical)
+## Current Write Requirements
 
-Every DB query must include `.eq("owner_user_id", user_id)`.
+Cloud schema compatibility requires the API to set timestamps explicitly on inserts where `updated_at` is non-nullable.
 
-Example:
+Current inserts now set:
 
-```
-supabase.table("cases").select("*").eq("id", case_id).eq("owner_user_id", user_id).execute()
-```
+- `cases`
+  - `created_at`
+  - `updated_at`
+- `sources`
+  - `created_at`
+  - `updated_at`
+- `runs`
+  - `created_at`
+  - `updated_at`
+  - `started_at`
+  - `triggered_by_user_id`
 
-### 4.3 File Upload Flow
+## Current Queueing Contract
 
-1. API receives `UploadFile`.
-2. API validates `case_id` belongs to user.
-3. API uploads file to Supabase Storage bucket `sources`.
-4. API inserts `sources` row with `status = pending`.
-5. API enqueues ingestion task to Worker.
+The API must route tasks explicitly.
 
-### 4.4 Run Trigger Flow
+- ingestion task `worker.tasks.ingestion.process_source` -> queue `worker`
+- orchestrator task `orchestrator.tasks.runs.start_run` -> queue `orchestrator`
+- orchestrator resume task `orchestrator.tasks.runs.resume_run` -> queue `orchestrator`
 
-1. API receives run request.
-2. Validate `case_id` ownership.
-3. Insert row in `runs` table.
-4. Enqueue orchestrator job with `run_id`.
+Do not rely on the default Celery queue in multi-consumer setups.
 
-### 4.5 Run Approval Flow
+## Source Upload Notes
 
-1. API receives approval request.
-2. Validate run ownership.
-3. Update run status to `resuming`, set `approved_by_user_id` and `approved_at`.
-4. Enqueue orchestrator resume task.
+- files are uploaded to Supabase Storage bucket `sources`
+- storage upload option `upsert` must be string `"true"` for the installed client
+- metadata persisted on source row:
+  - `filename`
+  - `mime_type`
+  - `byte_size`
 
----
+## Running
 
-## 5) Running the API Service Alone
-
-From `services/api`:
-
-1. Install dependencies:
-
-```
-poetry install
-```
-
-1. Run the server:
-
-```
-poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-1. API will be available at:
-
-```
-http://localhost:8000
-```
-
----
-
-## 6) Testing with Postman (Standalone)
-
-### Test 1: Health
-
-- Method: `GET`
-- URL: `http://localhost:8000/health`
-
-### Test 2: Create Case
-
-- Method: `POST`
-- URL: `http://localhost:8000/cases`
-- Headers: `Authorization: Bearer <jwt>`
-- Body (JSON):
-
-```
-{
-  "title": "Test Case",
-  "description": "A test case from Postman"
-}
+```bash
+cd services/api
+uv run python main.py
 ```
 
-### Test 3: Upload Source
+## Manual Validation
 
-- Method: `POST`
-- URL: `http://localhost:8000/cases/<case_id>/sources`
-- Headers: `Authorization: Bearer <jwt>`
-- Body: Form-data
-  - Key: `file`
-  - Value: (select file)
+The validated smoke path is:
 
-### Test 4: Start Run
+1. fetch Supabase access token
+2. `GET /api/v1/me`
+3. `POST /api/v1/cases`
+4. `POST /api/v1/cases/{case_id}/sources`
+5. wait for source `indexed`
+6. `POST /api/v1/cases/{case_id}/runs`
+7. wait for run `complete`
 
-- Method: `POST`
-- URL: `http://localhost:8000/cases/<case_id>/runs`
-- Headers: `Authorization: Bearer <jwt>`
+## Common Failure Modes
 
-### Test 5: Approve Run
-
-- Method: `POST`
-- URL: `http://localhost:8000/runs/<run_id>/approve`
-- Headers: `Authorization: Bearer <jwt>`
-
----
-
-## 7) Integration Steps
-
-### Integrate with Worker
-
-- When `sources` insert happens, enqueue a Worker job with `source_id`.
-- Confirm Worker updates `sources.status` to `processed`.
-
-### Integrate with Orchestrator
-
-- When `runs` insert happens, enqueue an Orchestrator job with `run_id`.
-- API should expose `GET /cases/{case_id}/runs/{run_id}` to poll status.
-- API should expose `POST /runs/{run_id}/approve` to resume a paused run.
-
-### Integrate with Website (Next.js)
-
-- Frontend calls the API, not Worker or Orchestrator directly.
-- All auth is passed in the `Authorization` header.
-- UI poll endpoints for status updates.
-
----
-
-## 8) Common Failure Modes
-
-- Missing `.eq("owner_user_id", user_id)` on queries.
-- File upload fails because bucket name is wrong.
-- API blocks for heavy work (should never parse files).
-- Invalid JWT causing 401 errors (check token source).
-
----
-
-## 9) Checklist (API)
-
-- FastAPI app runs locally.
-- Auth dependency extracts user correctly.
-- All queries enforce ownership.
-- Upload endpoint stores file and creates `sources` row.
-- Run endpoint creates `runs` row and triggers orchestrator.
-- Health endpoint returns OK.
+- wrong Supabase anon key / token source for the active cloud project
+- API process not restarted after `.env` or code change
+- wrong queue routing causing worker/orchestrator task collisions
+- missing explicit timestamps on inserts against the cloud schema
+- invalid storage upload option types for current Supabase client

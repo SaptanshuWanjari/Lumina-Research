@@ -9,7 +9,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import AppSearchInput from "../Common/AppSearchInput";
 import AvatarMenu from "../Common/AvatarMenu";
 import NotificationsButton from "../Common/NotificationsButton";
-import { appRoutes, isActivePath, notificationCount, topNavItems } from "@/lib/mock-app";
+import { appRoutes, isActivePath, topNavItems } from "@/lib/app-routes";
 
 const DashboardNavbar = () => {
   const pathname = usePathname();
@@ -48,7 +48,7 @@ const DashboardNavbar = () => {
 
         <div className="ml-auto flex items-center gap-2">
           <AppSearchInput />
-          <NotificationsButton href={appRoutes.runDetail} count={notificationCount} />
+          <NotificationsButton href={appRoutes.dashboard} count={0} />
           <Button
             variant="ghost"
             size="icon"

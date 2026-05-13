@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { appRoutes } from "@/lib/mock-app";
+import { appRoutes } from "@/lib/app-routes";
 
 const NavBar = () => {
   const links = [
     { name: "Dashboard", href: appRoutes.dashboard },
-    { name: "Cases", href: appRoutes.caseDesk },
+    { name: "Cases", href: appRoutes.cases },
     { name: "Search", href: appRoutes.search },
     { name: "Reports", href: appRoutes.reports },
   ];
@@ -41,7 +41,7 @@ const NavBar = () => {
 
         </div>
         <Link
-          href={appRoutes.caseDesk}
+          href={appRoutes.cases}
           className="bg-black text-white text-[13px] font-bold uppercase tracking-widest px-6 py-2.5 rounded-full hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 active:scale-95"
         >
           New Case

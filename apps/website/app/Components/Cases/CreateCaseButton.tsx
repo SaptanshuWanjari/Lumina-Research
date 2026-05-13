@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,19 +25,42 @@ interface CreateCaseButtonProps {
 }
 
 export function CreateCaseButton({ className, variant = "default", showIcon = false }: CreateCaseButtonProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
-  const [project, setProject] = useState("");
+  const [tag, setTag] = useState("");
+  const [question, setQuestion] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!title) return;
-    
-    console.log(`Case Created: Successfully created case: ${title}`);
-    alert(`Case Created: Successfully created case: ${title}`);
+
+    setSubmitting(true);
+    const response = await fetch("/api/cases", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        title,
+        question: question || null,
+        tags: tag ? [tag] : [],
+      }),
+    });
+
+    setSubmitting(false);
+    if (!response.ok) {
+      return;
+    }
+
+    const created = (await response.json()) as { id: string };
 
     setOpen(false);
     setTitle("");
-    setProject("");
+    setTag("");
+    setQuestion("");
+    router.push(`/cases/${created.id}/details`);
+    router.refresh();
   };
 
   return (
@@ -64,20 +89,22 @@ export function CreateCaseButton({ className, variant = "default", showIcon = fa
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="project">Project / Tag (Optional)</Label>
+            <Label htmlFor="project">Primary Tag (Optional)</Label>
             <Input
               id="project"
-              placeholder="e.g. Equities Team"
-              value={project}
-              onChange={(e) => setProject(e.target.value)}
+              placeholder="e.g. equities"
+              value={tag}
+              onChange={(e) => setTag(e.target.value)}
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="note">Notes (Optional)</Label>
+            <Label htmlFor="note">Research Question (Optional)</Label>
             <Textarea
               id="note"
-              placeholder="Initial thoughts or objectives..."
+              placeholder="What decision or analysis should this case answer?"
               className="resize-none"
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
             />
           </div>
         </div>
@@ -85,8 +112,8 @@ export function CreateCaseButton({ className, variant = "default", showIcon = fa
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button onClick={handleCreate} disabled={!title}>
-            Create Case
+          <Button onClick={handleCreate} disabled={!title || submitting}>
+            {submitting ? "Creating..." : "Create Case"}
           </Button>
         </DialogFooter>
       </DialogContent>

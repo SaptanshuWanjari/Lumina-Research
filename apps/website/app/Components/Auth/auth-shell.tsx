@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { appRoutes } from "@/lib/mock-app";
+import { appRoutes } from "@/lib/app-routes";
 
 type AuthVariant = "login" | "signup";
 
@@ -19,8 +19,15 @@ type AuthShellProps = {
   variant: AuthVariant;
 };
 
-export default function AuthShell({ variant }: AuthShellProps) {
+export default async function AuthShell({
+  variant,
+  searchParams,
+}: AuthShellProps & {
+  searchParams?: Promise<{ error?: string | string[] }>;
+}) {
   const isLogin = variant === "login";
+  const params = searchParams ? await searchParams : undefined;
+  const error = Array.isArray(params?.error) ? params?.error[0] : params?.error;
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#fafbfc]">
@@ -62,22 +69,33 @@ export default function AuthShell({ variant }: AuthShellProps) {
               </CardHeader>
 
               <CardContent className="px-6 pb-0 pt-6 sm:px-10">
+                {error ? (
+                  <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                    {error}
+                  </div>
+                ) : null}
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Button
                     type="button"
+                    asChild
                     variant="outline"
                     className="h-11 cursor-pointer rounded-lg border-slate-200 bg-white text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                   >
-                    <BsGoogle size={18} />
-                    Google
+                    <Link href="/auth/oauth?provider=google">
+                      <BsGoogle size={18} />
+                      Google
+                    </Link>
                   </Button>
                   <Button
                     type="button"
+                    asChild
                     variant="outline"
                     className="h-11 cursor-pointer rounded-lg border-slate-200 bg-white text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                   >
-                    <BsGithub size={18} />
-                    GitHub
+                    <Link href="/auth/oauth?provider=github">
+                      <BsGithub size={18} />
+                      GitHub
+                    </Link>
                   </Button>
                 </div>
 
@@ -89,7 +107,11 @@ export default function AuthShell({ variant }: AuthShellProps) {
                   <span className="h-px flex-1 bg-slate-200" />
                 </div>
 
-                <form className="mt-6 space-y-4">
+                <form
+                  className="mt-6 space-y-4"
+                  action={isLogin ? "/auth/login" : "/auth/signup"}
+                  method="post"
+                >
                   {!isLogin && (
                     <div>
                       <Label
@@ -100,6 +122,7 @@ export default function AuthShell({ variant }: AuthShellProps) {
                       </Label>
                       <Input
                         id="full-name"
+                        name="fullName"
                         type="text"
                         placeholder="Jane Doe"
                         className="mt-1.5 h-11 rounded-lg border-slate-200 bg-slate-50 px-4 text-slate-900 placeholder:text-slate-400 focus-visible:border-slate-400 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
@@ -114,10 +137,11 @@ export default function AuthShell({ variant }: AuthShellProps) {
                     >
                       Email
                     </Label>
-                    <Input
-                      id="work-email"
-                      type="email"
-                      placeholder="name@gmail.com"
+                      <Input
+                        id="work-email"
+                        name="email"
+                        type="email"
+                        placeholder="name@gmail.com"
                       className="mt-1.5 h-11 rounded-lg border-slate-200 bg-slate-50 px-4 text-slate-900 placeholder:text-slate-400 focus-visible:border-slate-400 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
                     />
                   </div>
@@ -129,10 +153,11 @@ export default function AuthShell({ variant }: AuthShellProps) {
                     >
                       Password
                     </Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="Enter password"
+                      <Input
+                        id="password"
+                        name="password"
+                        type="password"
+                        placeholder="Enter password"
                       className="mt-1.5 h-11 rounded-lg border-slate-200 bg-slate-50 px-4 text-slate-900 placeholder:text-slate-400 focus-visible:border-slate-400 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
                     />
                   </div>

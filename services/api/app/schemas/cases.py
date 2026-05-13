@@ -25,6 +25,7 @@ _PRIORITY_INT_MAP: dict[int, CasePriority] = {
 class CaseBase(BaseModel):
     title: str = Field(..., max_length=255)
     question: Optional[str] = None
+    summary: Optional[str] = None
     status: Optional[CaseStatus] = None
     priority: Optional[CasePriority | int] = None
     tags: List[str] = Field(default_factory=list)
@@ -49,6 +50,7 @@ class CaseCreate(CaseBase):
 class CaseUpdate(BaseModel):
     title: Optional[str] = Field(None, max_length=255)
     question: Optional[str] = None
+    summary: Optional[str] = None
     status: Optional[CaseStatus] = None
     priority: Optional[CasePriority | int] = None
     tags: Optional[List[str]] = None
@@ -69,6 +71,7 @@ class CaseUpdate(BaseModel):
 class Case(CaseBase):
     id: str
     owner_user_id: str
+    summary: Optional[str] = None
     status: CaseStatus
     priority: CasePriority
     tags: List[str]

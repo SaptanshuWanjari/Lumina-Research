@@ -1,158 +1,90 @@
-# Orchestrator Service Implementation Guide (LangGraph)
+# Orchestrator Service Implementation Guide (Current)
 
-This guide is a complete reference for the Orchestrator layer in `services/orchestrator`. It explains **what the layer must contain**, **file layout**, **execution flow**, **standalone execution**, **testing with Postman-like tools**, and **integration with API and website**.
+This guide reflects the live orchestrator implementation and the fixes required for Supabase cloud + PgBouncer.
 
----
+## Purpose
 
-## 1) Purpose of This Layer
+`services/orchestrator` runs the stateful LangGraph workflow for research runs. It consumes only the dedicated `orchestrator` Celery queue.
 
-The Orchestrator manages multi-step AI workflows. It is responsible for reasoning, retrieval, writing, and human review. Unlike the Worker, it is not a simple task runner. It must **store and resume graph state**.
+## Current Graph
 
----
+The current graph path is:
 
-## 2) Required Files and Structure
+1. `planner`
+2. `retriever`
+3. `analyzer`
+4. `writer`
+5. `human_review`
+6. `publish`
 
-Expected structure inside `services/orchestrator` (minimum viable):
+State is checkpointed by `run_id` as LangGraph `thread_id`.
 
-```
-services/orchestrator/
-  pyproject.toml
-  README.md
-  main.py
-  app/
-    __init__.py
-    core/
-      config.py
-      database.py
-    graph/
-      state.py
-      nodes.py
-      graph.py
-    services/
-      retriever.py
-      writer.py
-    checkpoints/
-      postgres.py
-```
+## Current Runtime Behavior
 
-### What each file should do
+- `start_run`
+  - loads `runs` + `cases`
+  - marks run `running`
+  - invokes LangGraph
+- `resume_run`
+  - loads latest draft report
+  - resumes from checkpoint
+  - marks run `complete`
 
-- `main.py`
-  - Runs the orchestrator consumer loop.
-  - Listens for `run_id` tasks.
+## Important Fixes Already Required
 
-- `app/core/config.py`
-  - Loads env vars (Supabase URL, service key, model keys).
+- queue isolation
+  - orchestrator must consume queue `orchestrator`
+  - do not consume the shared default queue in production-like runs
+- Supabase PgBouncer compatibility
+  - checkpointer removes `pgbouncer` query arg from connection string
+  - credentials are URL-encoded before psycopg use
+  - psycopg connection uses `prepare_threshold=None`
+  - do not use `PostgresSaver.from_conn_string(...)` directly
+- cloud model defaults
+  - planner/analyzer/writer defaults use `gemini-2.5-flash`
+- tracing
+  - LangSmith root run: `orchestrator.start_run`
+  - child traces include LangGraph and Gemini model calls
 
-- `app/core/database.py`
-  - Supabase client and Postgres connection.
+## Required Environment
 
-- `app/graph/state.py`
-  - Defines `State` TypedDict (messages, case_id, run_id, extracted_facts, report_draft).
+- valid `SUPABASE_URL`
+- valid `SUPABASE_SERVICE_ROLE_KEY`
+- valid `DATABASE_URL` / `LANGGRAPH_CHECKPOINT_DB_URL`
+- valid `GOOGLE_API_KEY`
+- Redis broker/backend
 
-- `app/graph/nodes.py`
-  - Functions for each graph node: planner, retriever, analyzer, writer, human_review.
+## Running
 
-- `app/graph/graph.py`
-  - Wires nodes together, defines transitions.
-
-- `app/services/retriever.py`
-  - Queries `chunks` table with pgvector search.
-
-- `app/services/writer.py`
-  - Produces final report output.
-
-- `app/checkpoints/postgres.py`
-  - Uses `langgraph-checkpoint-postgres` to save and load state.
-
----
-
-## 3) Required Code Flow
-
-### 3.1 Run Trigger Flow
-
-Input: `run_id`
-
-1. Fetch `runs` row and `case_id`.
-2. Set run status to `running`.
-3. Build initial `State`.
-4. Invoke LangGraph with thread_id = `run_id`.
-
-### 3.2 Graph Execution
-
-Typical graph path:
-
-1. **planner**: create research plan.
-2. **retriever**: fetch chunks from pgvector.
-3. **analyzer**: synthesize findings.
-4. **writer**: draft report.
-5. **human_review**: pause and wait for approval.
-
-When approved, it resumes and finalizes, then marks `runs.status = completed`.
-
-### 3.3 Human Review
-
-- When graph reaches `human_review`, it saves state and exits.
-- API exposes an endpoint to resume the run.
-- Orchestrator consumes a resume signal and continues execution.
-
----
-
-## 4) Running the Orchestrator Alone
-
-From `services/orchestrator`:
-
-1. Install dependencies:
-
-```
-poetry install
+```bash
+cd services/orchestrator
+uv run celery -A orchestrator.core.celery_app.celery_app worker --loglevel=INFO --queues=orchestrator
 ```
 
-2. Run the orchestrator:
+Expected queue:
 
-```
-poetry run python main.py
-```
+- `orchestrator`
 
-3. Orchestrator listens for tasks from the queue.
+## Manual Verification
 
----
+1. Ensure a case has at least one `indexed` source
+2. Start a run through the API
+3. Watch orchestrator logs for `orchestrator.tasks.runs.start_run`
+4. Poll run status
+5. Confirm LangSmith project `lumina-research-orchestrator`
 
-## 5) Testing with Postman (Standalone)
+If the run fails, first check:
 
-The Orchestrator has no web server. It is tested by triggering runs through the API.
+- Gemini quota / model availability
+- checkpoint tables in cloud Postgres
+- `match_chunks` RPC exists
 
-### Test Flow
+## Current Output Statuses
 
-1. Create a case.
-2. Upload source files and let Worker process them.
-3. Start a run with `POST /cases/{case_id}/runs`.
-4. Poll `GET /cases/{case_id}/runs/{run_id}`.
-5. When status = `awaiting_review`, call `POST /runs/{run_id}/approve` (API route).
-
----
-
-## 6) Integration Steps
-
-### Integrate with API
-
-- API enqueues orchestrator tasks when a run is created.
-- API exposes resume endpoint (`/runs/{run_id}/approve`).
-
-### Integrate with Worker
-
-- Orchestrator reads from `chunks` table (output of Worker).
-
-### Integrate with Website
-
-- Website triggers runs through API.
-- Website shows draft report and calls approve endpoint.
-
----
-
-## 7) Checklist (Orchestrator)
-
-- Orchestrator consumes `run_id` tasks.
-- LangGraph graph runs from planner to writer.
-- Human review pauses and resumes correctly.
-- Runs table updated with `running`, `awaiting_review`, `completed`.
+- active run states:
+  - `queued`
+  - `running`
+  - `needs_review`
+  - `resuming`
+  - `complete`
+  - `failed`

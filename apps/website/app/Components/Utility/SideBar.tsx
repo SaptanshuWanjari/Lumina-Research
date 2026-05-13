@@ -14,7 +14,7 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
-import { isActivePath, quickActions, sidebarNavItems } from "@/lib/mock-app";
+import { isActivePath, quickActions, sidebarNavItems } from "@/lib/app-routes";
 
 const SideBar = () => {
   const pathname = usePathname();
@@ -27,8 +27,8 @@ const SideBar = () => {
           Research Desk
         </SidebarGroupLabel>
         <div className="rounded-[13px] bg-slate-100 px-3 py-3 group-data-[collapsible=icon]:hidden">
-          <p className="text-sm font-semibold text-slate-800">Local Analyst</p>
-          <p className="text-xs text-slate-500">Private research mode</p>
+          <p className="text-sm font-semibold text-slate-800">Lumina Research</p>
+          <p className="text-xs text-slate-500">Supabase cloud workspace</p>
         </div>
       </SidebarHeader>
 
@@ -69,12 +69,10 @@ const SideBar = () => {
           <SidebarGroupContent>
             <SidebarMenu>
               {quickActions.map((item) => {
-                const Icon = item.icon;
                 return (
                   <SidebarMenuItem key={item.label}>
                     <SidebarMenuButton asChild tooltip={item.label} variant="outline">
                       <Link href={item.href}>
-                        <Icon className="size-4" />
                         <span>{item.label}</span>
                       </Link>
                     </SidebarMenuButton>

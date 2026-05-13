@@ -1,11 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
 
 export function NewDraftButton() {
-  const router = useRouter();
-
   const handleNewDraft = () => {
     console.log("New Draft: Navigating to draft creation...");
     alert("New Draft: Navigating to draft creation...");

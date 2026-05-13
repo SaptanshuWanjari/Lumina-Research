@@ -1,5 +1,4 @@
 import Image from "next/image";
-import { Cloud, Code2, Terminal } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 
 import { FcGoogle } from "react-icons/fc";
@@ -7,7 +6,7 @@ import { FaGithub } from "react-icons/fa";
 import { CgFigma } from "react-icons/cg";
 import { SiStripe } from "react-icons/si";
 import Link from "next/link";
-import { appRoutes } from "@/lib/mock-app";
+import { appRoutes } from "@/lib/app-routes";
 
 const Hero = () => {
   return (
