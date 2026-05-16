@@ -1,5 +1,6 @@
 from functools import lru_cache
 from typing import Any, Dict, Iterable, List, Optional
+from datetime import datetime, timezone
 
 from supabase import Client, create_client
 
@@ -131,6 +132,23 @@ def insert_row(supabase: Client, table: str, data: Dict[str, Any]) -> Dict[str, 
             return fallback_rows[0]
 
     raise RuntimeError(f"Failed to insert row into {table}")
+
+
+def ensure_profile_exists(supabase: Client, user_id: str) -> None:
+    existing = _response_data(
+        supabase.table("profiles").select("user_id").eq("user_id", user_id).execute()
+    )
+    if existing:
+        return
+
+    now = datetime.now(timezone.utc).isoformat()
+    supabase.table("profiles").insert(
+        {
+            "user_id": user_id,
+            "created_at": now,
+            "updated_at": now,
+        }
+    ).execute()
 
 
 def update_by_owner(

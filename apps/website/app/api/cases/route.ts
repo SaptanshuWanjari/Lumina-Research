@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { listCases } from "@/lib/server/data";
-import { requireUserContext } from "@/lib/server/auth";
+import { requireAccessToken } from "@/lib/server/auth";
+import { ServicesApiError, servicesApiFetch } from "@/lib/server/services-api";
 
 export async function GET() {
   const cases = await listCases();
@@ -9,10 +10,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const { supabase, user } = await requireUserContext();
+  const { accessToken } = await requireAccessToken();
   const body = await request.json();
 
-  const now = new Date().toISOString();
   const payload = {
     title: String(body.title ?? "").trim(),
     question:
@@ -30,30 +30,29 @@ export async function POST(request: NextRequest) {
     tags: Array.isArray(body.tags)
       ? body.tags.filter((item: unknown): item is string => typeof item === "string")
       : [],
-    owner_user_id: user.id,
-    created_at: now,
-    updated_at: now,
   };
 
   if (!payload.title) {
     return NextResponse.json({ detail: "title is required" }, { status: 400 });
   }
 
-  const { data, error } = await supabase
-    .from("cases")
-    .insert(payload)
-    .select(
-      "id,title,question,summary,status,priority,tags,owner_user_id,created_at,updated_at,archived_at",
-    )
-    .single();
+  try {
+    const created = await servicesApiFetch("/cases", accessToken!, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    return NextResponse.json(created, { status: 201 });
+  } catch (error) {
+    if (error instanceof ServicesApiError) {
+      return NextResponse.json(
+        { detail: error.message },
+        { status: error.status },
+      );
+    }
 
-  if (error) {
-    return NextResponse.json({ detail: error.message }, { status: 500 });
+    return NextResponse.json(
+      { detail: "Failed to create case" },
+      { status: 500 },
+    );
   }
-
-  const created = {
-    ...data,
-    tags: Array.isArray(data.tags) ? data.tags : [],
-  };
-  return NextResponse.json(created, { status: 201 });
 }

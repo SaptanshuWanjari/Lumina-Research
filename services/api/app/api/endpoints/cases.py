@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from app.core.database import (
     delete_by_owner,
     ensure_case_owner,
+    ensure_profile_exists,
     get_supabase,
     insert_row,
     select_many_by_owner,
@@ -36,8 +37,9 @@ def create_case(
     data["updated_at"] = now
 
     try:
+        ensure_profile_exists(supabase, current_user.sub)
         return insert_row(supabase, "cases", data)
-    except RuntimeError as exc:
+    except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to create case: {exc}")
 
 

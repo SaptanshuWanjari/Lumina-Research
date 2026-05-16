@@ -6,8 +6,8 @@ import {
   Search,
   Settings,
   Workflow,
+  PlusCircle,
 } from "lucide-react";
-
 export type AppNavItem = {
   label: string;
   href: string;
@@ -70,7 +70,7 @@ export const sidebarNavItems: AppNavItem[] = [
 ];
 
 export const quickActions = [
-  { label: "New Analysis", href: appRoutes.cases },
+  { label: "New Analysis", href: appRoutes.cases ,icon:PlusCircle},
 ];
 
 export function isActivePath(pathname: string, item: AppNavItem) {

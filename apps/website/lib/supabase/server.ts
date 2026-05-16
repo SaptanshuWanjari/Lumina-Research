@@ -13,6 +13,18 @@ function getSupabaseAnonKey() {
 }
 
 export async function getServerSupabaseClient() {
+  return createSupabaseClient({ allowCookieWrites: false });
+}
+
+export async function getRouteHandlerSupabaseClient() {
+  return createSupabaseClient({ allowCookieWrites: true });
+}
+
+async function createSupabaseClient({
+  allowCookieWrites,
+}: {
+  allowCookieWrites: boolean;
+}) {
   const url = getSupabaseUrl();
   const anonKey = getSupabaseAnonKey();
   if (!url || !anonKey) return null;
@@ -25,6 +37,8 @@ export async function getServerSupabaseClient() {
         return cookieStore.getAll();
       },
       setAll(cookiesToSet) {
+        if (!allowCookieWrites) return;
+
         for (const cookie of cookiesToSet) {
           cookieStore.set(cookie.name, cookie.value, cookie.options);
         }

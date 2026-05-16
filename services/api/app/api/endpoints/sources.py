@@ -173,8 +173,11 @@ async def create_source(
 
     try:
         record = insert_row(supabase, "sources", insert_data)
-    except RuntimeError:
-        raise HTTPException(status_code=500, detail="Failed to create source record")
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create source record: {exc}",
+        ) from exc
 
     try:
         enqueue_ingestion(source_id)
@@ -186,6 +189,9 @@ async def create_source(
             current_user.sub,
             {"status": "failed", "error_message": f"enqueue_failed: {exc}"},
         )
-        raise HTTPException(status_code=500, detail="Failed to enqueue ingestion task")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to enqueue ingestion task: {exc}",
+        ) from exc
 
     return record

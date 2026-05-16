@@ -27,10 +27,6 @@ export default async function DashboardPage() {
             <h1 className="text-3xl font-bold tracking-tight text-slate-800">
               Dashboard
             </h1>
-            <p className="text-slate-600 mt-2">
-              Live workspace view for {dashboard.me.displayName}. Cases, sources,
-              runs, and reports now resolve from Supabase cloud.
-            </p>
           </div>
 
           <CreateCaseButton className="px-6 py-6 text-lg bg-slate-900 hover:bg-slate-800 rounded-2xl" showIcon={true} />

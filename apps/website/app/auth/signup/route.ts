@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { appRoutes } from "@/lib/app-routes";
-import { getServerSupabaseClient } from "@/lib/supabase/server";
+import { getRouteHandlerSupabaseClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
-  const supabase = await getServerSupabaseClient();
+  const supabase = await getRouteHandlerSupabaseClient();
   if (!supabase) {
     return NextResponse.redirect(new URL(appRoutes.signup, request.url));
   }

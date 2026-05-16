@@ -8,7 +8,7 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarHeader,
+  // SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -22,15 +22,14 @@ const SideBar = () => {
 
   return (
     <Sidebar collapsible="icon" variant="inset">
-      <SidebarHeader>
-        <SidebarGroupLabel className="px-3 text-[16px] uppercase tracking-[0.16em] text-sidebar-foreground/50 group-data-[collapsible=icon]:hidden">
-          Research Desk
-        </SidebarGroupLabel>
-        <div className="rounded-[13px] bg-slate-100 px-3 py-3 group-data-[collapsible=icon]:hidden">
-          <p className="text-sm font-semibold text-slate-800">Lumina Research</p>
-          <p className="text-xs text-slate-500">Supabase cloud workspace</p>
-        </div>
-      </SidebarHeader>
+      {/* <SidebarHeader> */}
+      {/*   <SidebarGroupLabel className="px-3 text-[16px] uppercase tracking-[0.16em] text-sidebar-foreground/50 group-data-[collapsible=icon]:hidden"> */}
+      {/*     Research Desk */}
+      {/*   </SidebarGroupLabel> */}
+      {/*   <div className="rounded-[13px] bg-slate-100 px-3 py-3 group-data-[collapsible=icon]:hidden"> */}
+      {/*     <p className="text-sm font-semibold text-slate-800">Lumina Research</p> */}
+      {/*   </div> */}
+      {/* </SidebarHeader> */}
 
       <SidebarContent>
         <SidebarGroup>
@@ -73,6 +72,7 @@ const SideBar = () => {
                   <SidebarMenuItem key={item.label}>
                     <SidebarMenuButton asChild tooltip={item.label} variant="outline">
                       <Link href={item.href}>
+                        <item.icon className="size-4" />
                         <span>{item.label}</span>
                       </Link>
                     </SidebarMenuButton>

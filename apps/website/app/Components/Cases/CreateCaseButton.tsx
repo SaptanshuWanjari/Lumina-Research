@@ -31,11 +31,13 @@ export function CreateCaseButton({ className, variant = "default", showIcon = fa
   const [tag, setTag] = useState("");
   const [question, setQuestion] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleCreate = async () => {
     if (!title) return;
 
     setSubmitting(true);
+    setError(null);
     const response = await fetch("/api/cases", {
       method: "POST",
       headers: {
@@ -50,6 +52,14 @@ export function CreateCaseButton({ className, variant = "default", showIcon = fa
 
     setSubmitting(false);
     if (!response.ok) {
+      let detail = "Failed to create case.";
+      try {
+        const payload = (await response.json()) as { detail?: string };
+        if (payload.detail) {
+          detail = payload.detail;
+        }
+      } catch {}
+      setError(detail);
       return;
     }
 
@@ -59,6 +69,7 @@ export function CreateCaseButton({ className, variant = "default", showIcon = fa
     setTitle("");
     setTag("");
     setQuestion("");
+    setError(null);
     router.push(`/cases/${created.id}/details`);
     router.refresh();
   };
@@ -107,6 +118,7 @@ export function CreateCaseButton({ className, variant = "default", showIcon = fa
               onChange={(e) => setQuestion(e.target.value)}
             />
           </div>
+          {error ? <p className="text-sm text-rose-600">{error}</p> : null}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>

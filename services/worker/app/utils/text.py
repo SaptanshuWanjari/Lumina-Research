@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from io import BytesIO
 from typing import Iterable
+from urllib.parse import urlparse
 
 import httpx
 import tiktoken
@@ -10,6 +11,37 @@ from bs4 import BeautifulSoup
 from pdfminer.high_level import extract_text
 
 from app.core.config import settings
+
+
+class SourceFetchError(RuntimeError):
+    pass
+
+
+_BROWSER_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+    ),
+    "Accept": (
+        "text/html,application/xhtml+xml,application/xml;q=0.9,"
+        "text/plain;q=0.8,*/*;q=0.7"
+    ),
+    "Accept-Language": "en-US,en;q=0.9",
+    "Cache-Control": "no-cache",
+    "Pragma": "no-cache",
+}
+
+_BOILERPLATE_TAGS = {
+    "script",
+    "style",
+    "noscript",
+    "template",
+    "svg",
+    "nav",
+    "footer",
+    "aside",
+    "form",
+}
 
 
 def normalize_text(text: str) -> str:
@@ -47,20 +79,110 @@ def extract_file_text(
 
 def extract_html_text(html: str) -> str:
     soup = BeautifulSoup(html, "lxml")
-    for tag in soup(["script", "style", "noscript", "template", "svg"]):
+
+    for tag in soup(_BOILERPLATE_TAGS):
         tag.decompose()
+
+    for tag in soup.find_all(
+        attrs={
+            "aria-hidden": "true",
+        }
+    ):
+        tag.decompose()
+
+    for tag in soup.find_all(True):
+        text = normalize_text(tag.get_text(" ", strip=True))
+        if not text:
+            continue
+
+        link_text = normalize_text(
+            " ".join(link.get_text(" ", strip=True) for link in tag.find_all("a"))
+        )
+        text_len = len(text)
+        link_ratio = (len(link_text) / text_len) if text_len else 0
+        has_content_blocks = bool(tag.find(["p", "article", "section", "h1", "h2", "h3"]))
+
+        if link_ratio > 0.7 and text_len < 500 and not has_content_blocks:
+            tag.decompose()
+
+    best_text = ""
+    best_score = float("-inf")
+    candidates = soup.select("article, main, [role='main'], section, div, body")
+
+    for candidate in candidates:
+        candidate_text = normalize_text(candidate.get_text("\n"))
+        if len(candidate_text) < 200:
+            continue
+
+        paragraph_count = len(candidate.find_all("p"))
+        heading_count = len(candidate.find_all(["h1", "h2", "h3"]))
+        link_text = normalize_text(
+            " ".join(link.get_text(" ", strip=True) for link in candidate.find_all("a"))
+        )
+        link_ratio = (len(link_text) / len(candidate_text)) if candidate_text else 0
+        score = (
+            len(candidate_text)
+            + (paragraph_count * 120)
+            + (heading_count * 80)
+            - (link_ratio * 1200)
+        )
+
+        if score > best_score:
+            best_score = score
+            best_text = candidate_text
+
+    if best_text:
+        return best_text
+
     return normalize_text(soup.get_text("\n"))
 
 
 def fetch_url_text(url: str) -> tuple[str, str, str | None]:
+    parsed = urlparse(url)
+    headers = {
+        **_BROWSER_HEADERS,
+        "Referer": f"{parsed.scheme}://{parsed.netloc}/" if parsed.scheme and parsed.netloc else url,
+    }
+
     with httpx.Client(
-        timeout=settings.WORKER_HTTP_TIMEOUT_SECONDS, follow_redirects=True
+        timeout=settings.WORKER_HTTP_TIMEOUT_SECONDS,
+        follow_redirects=True,
+        headers=headers,
     ) as client:
         response = client.get(url)
-        response.raise_for_status()
+        if response.status_code in {401, 403, 406}:
+            retry_headers = {
+                **headers,
+                "Accept": "*/*",
+                "Upgrade-Insecure-Requests": "1",
+            }
+            response = client.get(url, headers=retry_headers)
+
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            status_code = exc.response.status_code
+            if status_code in {401, 403, 406}:
+                raise SourceFetchError(
+                    f"Source site blocked automated fetch ({status_code}) for {url}. "
+                    "Try uploading a file, pasting the relevant text as a note, "
+                    "or use a different source URL."
+                ) from exc
+            raise
+
         content_type = response.headers.get("content-type")
         content = response.content[: settings.WORKER_MAX_URL_BYTES]
-    return extract_html_text(content.decode(response.encoding or "utf-8", errors="replace")), "httpx-bs4", content_type
+
+    if content_type and "html" not in content_type.lower():
+        return extract_file_text(content, urlparse(url).path, content_type)
+
+    return (
+        extract_html_text(
+            content.decode(response.encoding or "utf-8", errors="replace")
+        ),
+        "httpx-bs4",
+        content_type,
+    )
 
 
 def token_count(text: str) -> int:

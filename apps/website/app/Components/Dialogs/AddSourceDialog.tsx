@@ -34,9 +34,11 @@ export default function AddSourceDialog({
   const [noteText, setNoteText] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit() {
     setSubmitting(true);
+    setError(null);
 
     let response: Response;
     if (!caseId) {
@@ -78,12 +80,23 @@ export default function AddSourceDialog({
     }
 
     setSubmitting(false);
-    if (!response.ok) return;
+    if (!response.ok) {
+      let detail = "Failed to add source.";
+      try {
+        const payload = (await response.json()) as { detail?: string };
+        if (payload.detail) {
+          detail = payload.detail;
+        }
+      } catch {}
+      setError(detail);
+      return;
+    }
 
     setUrl("");
     setTitle("");
     setNoteText("");
     setFile(null);
+    setError(null);
     router.refresh();
   }
 
@@ -160,6 +173,7 @@ export default function AddSourceDialog({
             </p>
           </TabsContent>
         </Tabs>
+        {error ? <p className="text-sm text-rose-600">{error}</p> : null}
         <DialogFooter>
           <Button variant="outline">Cancel</Button>
           <Button
