@@ -36,7 +36,7 @@ def planner_node(state: OrchestratorState) -> dict[str, Any]:
         "Create focused research plan",
         {"question": state["question"]},
     )
-    result = planner_llm().invoke_json(
+    result = planner_llm(state["owner_user_id"]).invoke_json(
         "Return strict JSON with key research_plan: array of 3-6 concise retrieval queries.",
         f"Case question:\n{state['question']}",
     )
@@ -105,7 +105,7 @@ def analyzer_node(state: OrchestratorState) -> dict[str, Any]:
         {"chunk_count": len(chunks)},
     )
     evidence = json.dumps(chunks, ensure_ascii=True)[:24000]
-    notes = analyzer_llm().invoke_text(
+    notes = analyzer_llm(state["owner_user_id"]).invoke_text(
         "Use only supplied evidence. Produce concise structured notes with uncertainties.",
         f"Question:\n{state['question']}\n\nEvidence JSON:\n{evidence}",
     )
@@ -131,7 +131,7 @@ def writer_node(state: OrchestratorState) -> dict[str, Any]:
         {"chunk_count": len(chunks)},
     )
     evidence = json.dumps(chunks, ensure_ascii=True)[:24000]
-    result = writer_llm().invoke_json(
+    result = writer_llm(state["owner_user_id"]).invoke_json(
         (
             "Return strict JSON with keys draft_report, summary, citation_map. "
             "draft_report must be markdown. Inline citations must use labels already "

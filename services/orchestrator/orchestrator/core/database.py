@@ -66,6 +66,14 @@ class SupabaseRunStore:
             raise RuntimeError("Run not found or access denied")
         return row
 
+    def get_ai_settings(self, owner_user_id: str) -> dict[str, Any] | None:
+        return response_one(
+            self.client.table("ai_settings")
+            .select("*")
+            .eq("owner_user_id", owner_user_id)
+            .execute()
+        )
+
     def update_run(
         self, run_id: str, owner_user_id: str, values: dict[str, Any]
     ) -> dict[str, Any]:

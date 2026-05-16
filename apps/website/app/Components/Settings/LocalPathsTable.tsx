@@ -1,95 +1,49 @@
-"use client";
-
-import { useState } from "react";
-
-import StatusChip from "@/app/Components/Common/StatusChip";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-
-interface LocalPathItem {
-  name: string;
-  path: string;
-  description: string;
-  status: "ACTIVE" | "INDEXED";
-}
+import type { StorageLocationSummary } from "@/lib/server/ai-settings";
 
 interface LocalPathsTableProps {
-  initialSources: LocalPathItem[];
+  locations: StorageLocationSummary[];
 }
 
-export default function LocalPathsTable({ initialSources }: LocalPathsTableProps) {
-  const [sources, setSources] = useState(initialSources);
-  const [path, setPath] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
-
-  const addPath = () => {
-    const trimmed = path.trim();
-    if (!trimmed) {
-      setMessage("Enter a valid local path before adding.");
-      return;
-    }
-
-    setSources((prev) => [
-      {
-        name: "Custom Source",
-        path: trimmed,
-        description: "User-added local directory",
-        status: "ACTIVE",
-      },
-      ...prev,
-    ]);
-    setPath("");
-    setMessage("Data path added. Source discovery will include this directory.");
-  };
-
+export default function LocalPathsTable({
+  locations = [],
+}: LocalPathsTableProps) {
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <h2 className="text-3xl font-semibold text-slate-900">Data Sources</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Local directories and research feeds used during analysis.
-          </p>
-        </div>
-      </div>
-
-      {message ? (
-        <Alert className="border-slate-200 bg-slate-50">
-          <AlertTitle>Local data update</AlertTitle>
-          <AlertDescription>{message}</AlertDescription>
-        </Alert>
-      ) : null}
-
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Input
-          value={path}
-          onChange={(event) => setPath(event.target.value)}
-          placeholder="/analysis/local-store/new-dataset"
-          className="h-10 rounded-full border-slate-200 bg-slate-50"
-        />
-        <Button
-          className="h-10 rounded-full bg-slate-950 px-5 text-sm font-semibold text-white hover:bg-slate-800"
-          onClick={addPath}
-        >
-          Add Data Path
-        </Button>
+      <div>
+        <h2 className="text-3xl font-semibold text-slate-900">Data Footprint</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Storage paths below are discovered from your indexed sources. This tab is
+          read-only until path management is implemented end to end.
+        </p>
       </div>
 
       <div className="space-y-3">
-        {sources.map((source) => (
-          <article key={source.path} className="rounded-[13px] border border-slate-200 bg-slate-50 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-slate-800">{source.path}</p>
-                <p className="text-sm text-slate-500">{source.description}</p>
+        {locations.length ? (
+          locations.map((location) => (
+            <article
+              key={location.path}
+              className="rounded-[13px] border border-slate-200 bg-slate-50 p-4"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">{location.path}</p>
+                  <p className="text-sm text-slate-500">
+                    Referenced by {location.sourceCount} indexed{" "}
+                    {location.sourceCount === 1 ? "source" : "sources"}.
+                  </p>
+                </div>
+                <p className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">
+                  READ ONLY
+                </p>
               </div>
-              <StatusChip tone={source.status === "ACTIVE" ? "success" : "info"}>
-                {source.status}
-              </StatusChip>
-            </div>
+            </article>
+          ))
+        ) : (
+          <article className="rounded-[13px] border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500">
+            No stored source paths yet. Uploaded files and fetched URLs will appear here
+            after ingestion writes a storage path.
           </article>
-        ))}
+        )}
       </div>
     </div>
   );

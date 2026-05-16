@@ -1,38 +1,27 @@
 // "use client";
 import Link from "next/link";
-import {
-  BrainCircuit,
-  Database,
-  ShieldCheck,
-  SlidersHorizontal,
-} from "lucide-react";
+import { BrainCircuit, Database, ShieldCheck } from "lucide-react";
 
 import DashboardLayout from "../../Components/Layout/DashboardLayout";
-import { Button } from "@/components/ui/button";
 import ModelDefaultsPanel from "@/app/Components/Settings/ModelDefaultsPanel";
+import { SecurityPanel } from "@/app/Components/Settings/SecurityPanel";
 import LocalPathsTable from "@/app/Components/Settings/LocalPathsTable";
-import { ClearCacheButton } from "@/app/Components/Settings/ClearCacheButton";
+import { getAiSettingsSummary, listStorageLocations } from "@/lib/server/ai-settings";
 
-type SettingsSection = "general" | "models" | "security" | "data";
+type SettingsSection = "ai" | "security" | "data";
 
-const SETTINGS_SECTIONS: SettingsSection[] = [
-  "general",
-  "models",
-  "security",
-  "data",
-];
+const SETTINGS_SECTIONS: SettingsSection[] = ["ai", "security", "data"];
 
 function normalizeSection(value?: string | string[]): SettingsSection {
   const parsed = Array.isArray(value) ? value[0] : value;
   if (parsed && SETTINGS_SECTIONS.includes(parsed as SettingsSection)) {
     return parsed as SettingsSection;
   }
-  return "general";
+  return "ai";
 }
 
 function sectionIcon(section: SettingsSection) {
-  if (section === "general") return <SlidersHorizontal className="size-4" />;
-  if (section === "models") return <BrainCircuit className="size-4" />;
+  if (section === "ai") return <BrainCircuit className="size-4" />;
   if (section === "security") return <ShieldCheck className="size-4" />;
   return <Database className="size-4" />;
 }
@@ -41,22 +30,12 @@ export default async function SettingsPage(props: {
   searchParams: Promise<{ section?: string | string[] }>;
 }) {
   const searchParams = await props.searchParams;
-
   const section = normalizeSection(searchParams.section);
-  const sources = [
-    {
-      name: "Market Data",
-      path: "./datasets/market",
-      description: "Local CSV and parquet inputs",
-      status: "ACTIVE" as const,
-    },
-    {
-      name: "Research Notes",
-      path: "./notes/research",
-      description: "Local markdown and text notes",
-      status: "INDEXED" as const,
-    },
-  ];
+  const [aiSettings, storageLocations] = await Promise.all([
+    getAiSettingsSummary(),
+    listStorageLocations(),
+  ]);
+
   return (
     <DashboardLayout>
       <section className="min-h-screen bg-slate-50 p-6">
@@ -66,8 +45,8 @@ export default async function SettingsPage(props: {
               Preferences
             </h1>
             <p className="mt-2 text-slate-600">
-              Local controls for analysis defaults, model behavior, and stored
-              data.
+              Runtime configuration for AI providers, saved credentials, and data
+              storage visibility.
             </p>
           </header>
 
@@ -88,102 +67,19 @@ export default async function SettingsPage(props: {
                         }`}
                       >
                         {sectionIcon(item)}
-                        {item}
+                        {item === "ai" ? "AI" : item}
                       </Link>
                     );
                   })}
-                  <div className="mt-8 border-t border-slate-200 pt-6">
-                    <ClearCacheButton />
-                  </div>
                 </nav>
-
-                {/* <div className="mt-8 rounded-xl bg-rose-50 px-4 py-3">
-                  <p className="text-xs font-semibold tracking-[0.14em] text-rose-700">
-                    LOCAL RESET
-                  </p>
-                  <p className="mt-1 text-xs text-rose-600">
-                    Clearing caches and traces affects only this installation.
-                  </p>
-                </div> */}
               </aside>
 
               <div className="p-5 md:p-7">
-                {section === "general" && (
-                  <div className="space-y-6">
-                    <div>
-                      <h2 className="text-3xl font-semibold text-slate-900">
-                        General
-                      </h2>
-                      <p className="mt-1 text-sm text-slate-500">
-                        Core defaults for your local research environment.
-                      </p>
-                    </div>
-                    <div className="grid gap-4 lg:grid-cols-2">
-                      <article className="rounded-[13px] border border-slate-200 bg-slate-50 p-4">
-                        <p className="text-lg font-semibold text-slate-800">
-                          Research Desk Name
-                        </p>
-                        <p className="mt-1 text-sm text-slate-500">
-                          Current profile label used across cases and reports.
-                        </p>
-                        <p className="mt-3 text-sm font-semibold text-slate-700">
-                          Local Analyst
-                        </p>
-                      </article>
-                      <article className="rounded-[13px] border border-slate-200 bg-slate-50 p-4">
-                        <p className="text-lg font-semibold text-slate-800">
-                          Default Storage Path
-                        </p>
-                        <p className="mt-1 text-sm text-slate-500">
-                          Research artifacts are written under the local project
-                          directory.
-                        </p>
-                        <p className="mt-3 text-sm font-semibold text-slate-700">
-                          `/analysis/local-store`
-                        </p>
-                      </article>
-                    </div>
-                  </div>
-                )}
+                {section === "ai" && <ModelDefaultsPanel initialSettings={aiSettings} />}
 
-                {section === "models" && (
-                  <ModelDefaultsPanel />
-                )}
+                {section === "security" && <SecurityPanel settings={aiSettings} />}
 
-                {section === "security" && (
-                  <div className="space-y-6">
-                    <div>
-                      <h2 className="text-3xl font-semibold text-slate-900">
-                        Security
-                      </h2>
-                      <p className="mt-1 text-sm text-slate-500">
-                        Local privacy defaults and trace retention behavior.
-                      </p>
-                    </div>
-                    <div className="grid gap-4 lg:grid-cols-2">
-                      <article className="rounded-[13px] border border-slate-200 bg-slate-50 p-4">
-                        <p className="text-lg font-semibold text-slate-800">
-                          Trace Retention
-                        </p>
-                        <p className="mt-1 text-sm text-slate-500">
-                          Keep run traces for 30 days before archival.
-                        </p>
-                      </article>
-                      <article className="rounded-[13px] border border-slate-200 bg-slate-50 p-4">
-                        <p className="text-lg font-semibold text-slate-800">
-                          Local Encryption
-                        </p>
-                        <p className="mt-1 text-sm text-slate-500">
-                          Sensitive cached source text is encrypted at rest.
-                        </p>
-                      </article>
-                    </div>
-                  </div>
-                )}
-
-                {section === "data" && (
-                  <LocalPathsTable initialSources={sources} />
-                )}
+                {section === "data" && <LocalPathsTable locations={storageLocations} />}
               </div>
             </div>
           </section>

@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/1"
     ORCHESTRATOR_QUEUE_NAME: str = "orchestrator"
 
+    AI_SETTINGS_ENCRYPTION_KEY: str = ""
+    OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
     GOOGLE_API_KEY: str = ""
     GEMINI_PLANNER_MODEL: str = "gemini-2.5-flash-lite"
     GEMINI_ANALYZER_MODEL: str = "gemini-2.5-flash-lite"

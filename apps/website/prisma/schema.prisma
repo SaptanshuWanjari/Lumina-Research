@@ -160,8 +160,23 @@ model Profile {
   jobs                   Job[]              @relation("JobOwner")
   auditLogsOwned         AuditLog[]         @relation("AuditLogOwner")
   auditLogsActor         AuditLog[]         @relation("AuditLogActor")
+  aiSettings             AiSettings?
 
   @@map("profiles")
+}
+
+model AiSettings {
+  ownerUserId      String   @id @map("owner_user_id") @db.Uuid
+  provider         String
+  model            String
+  encryptedApiKey  String?  @map("encrypted_api_key")
+  apiKeyLastFour   String?  @map("api_key_last_four")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  owner Profile @relation(fields: [ownerUserId], references: [userId], onDelete: Cascade)
+
+  @@map("ai_settings")
 }
 
 model Case {
