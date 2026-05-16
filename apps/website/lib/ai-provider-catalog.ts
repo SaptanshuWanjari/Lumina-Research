@@ -36,7 +36,7 @@ export function listModelsForProvider(provider: AiProvider): string[] {
 }
 
 export function isValidProviderModel(provider: AiProvider, model: string) {
-  return AI_PROVIDER_CATALOG[provider].models.includes(model);
+  return (AI_PROVIDER_CATALOG[provider].models as readonly string[]).includes(model);
 }
 
 export function defaultModelForProvider(provider: AiProvider) {

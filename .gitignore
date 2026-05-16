@@ -50,6 +50,8 @@ __pycache__/
 .venv/
 venv/
 env/
+!infra/env/
+!infra/env/*.example
 
 # python packaging
 *.egg-info/

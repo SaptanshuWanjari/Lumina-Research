@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type React from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -153,7 +154,7 @@ export function MarkdownRenderer({
         6: "mt-4 text-sm font-semibold uppercase tracking-[0.16em] text-slate-500",
       } as const;
 
-      const Tag = `h${level}` as keyof JSX.IntrinsicElements;
+      const Tag = `h${level}` as keyof React.JSX.IntrinsicElements;
       blocks.push(
         <Tag key={`heading-${blocks.length}`} className={classMap[level as keyof typeof classMap]}>
           {renderInline(text)}
