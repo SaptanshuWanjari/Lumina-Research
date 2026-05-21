@@ -267,6 +267,37 @@ class SupabaseRunStore:
         if not draft:
             raise RuntimeError("No draft report_version found for publish")
         now = utcnow_iso()
+        self._archive_published_report_versions(case_id, draft["id"], now)
+        try:
+            return self._publish_report_version(draft, case_id, owner_user_id, final_markdown, now)
+        except Exception as exc:
+            if "uq_report_versions_one_published_per_case" not in str(exc) and "23505" not in str(exc):
+                raise
+            now = utcnow_iso()
+            self._archive_published_report_versions(case_id, draft["id"], now)
+            return self._publish_report_version(draft, case_id, owner_user_id, final_markdown, now)
+
+    def _archive_published_report_versions(
+        self, case_id: str, excluded_report_version_id: str, now: str
+    ) -> None:
+        self.client.table("report_versions").update(
+            {
+                "status": "archived",
+                "archived_at": now,
+                "updated_at": now,
+            }
+        ).eq("case_id", case_id).eq("status", "published").neq(
+            "id", excluded_report_version_id
+        ).execute()
+
+    def _publish_report_version(
+        self,
+        draft: dict[str, Any],
+        case_id: str,
+        owner_user_id: str,
+        final_markdown: str,
+        now: str,
+    ) -> dict[str, Any]:
         return response_one(
             self.client.table("report_versions")
             .update(

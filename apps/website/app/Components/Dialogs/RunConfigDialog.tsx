@@ -1,5 +1,8 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -22,16 +25,47 @@ import {
 } from "@/components/ui/select";
 
 interface RunConfigDialogProps {
+  caseId: string;
   triggerLabel?: string;
   triggerClassName?: string;
 }
 
 export default function RunConfigDialog({
+  caseId,
   triggerLabel = "Run Analysis",
   triggerClassName,
 }: RunConfigDialogProps) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [depth, setDepth] = useState<"quick" | "standard" | "deep">("standard");
+  const [citationStrictness, setCitationStrictness] = useState<
+    "lenient" | "strict"
+  >("strict");
+  const [humanReviewEnabled, setHumanReviewEnabled] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleStart() {
+    setSubmitting(true);
+    const response = await fetch(`/api/cases/${caseId}/runs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        depth,
+        citation_strictness: citationStrictness,
+        human_review_enabled: humanReviewEnabled,
+      }),
+    });
+    setSubmitting(false);
+    if (!response.ok) return;
+
+    const run = (await response.json()) as { id: string };
+    setOpen(false);
+    router.push(`/runs/${run.id}`);
+    router.refresh();
+  }
+
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
           className={
@@ -57,7 +91,12 @@ export default function RunConfigDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Depth</Label>
-              <Select defaultValue="standard">
+              <Select
+                value={depth}
+                onValueChange={(value) =>
+                  setDepth(value as "quick" | "standard" | "deep")
+                }
+              >
                 <SelectTrigger className="h-10 w-full rounded-full border border-slate-200 bg-slate-50 px-4">
                   <SelectValue />
                 </SelectTrigger>
@@ -70,7 +109,12 @@ export default function RunConfigDialog({
             </div>
             <div className="space-y-2">
               <Label>Citation strictness</Label>
-              <Select defaultValue="strict">
+              <Select
+                value={citationStrictness}
+                onValueChange={(value) =>
+                  setCitationStrictness(value as "lenient" | "strict")
+                }
+              >
                 <SelectTrigger className="h-10 w-full rounded-full border border-slate-200 bg-slate-50 px-4">
                   <SelectValue />
                 </SelectTrigger>
@@ -82,19 +126,21 @@ export default function RunConfigDialog({
             </div>
           </div>
           <label className="flex items-center gap-3 rounded-[13px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
-            <Checkbox defaultChecked />
+            <Checkbox
+              checked={humanReviewEnabled}
+              onCheckedChange={(checked) =>
+                setHumanReviewEnabled(checked === true)
+              }
+            />
             <span>Enable human review gate before publish</span>
           </label>
         </div>
         <DialogFooter>
-          <Button variant="outline">Cancel</Button>
-          <Button
-            onClick={() => {
-              console.log("Start Run: Starting analysis run...");
-              alert("Start Run: Starting analysis run...");
-            }}
-          >
-            Start Run
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleStart} disabled={submitting}>
+            {submitting ? "Queueing..." : "Start Run"}
           </Button>
         </DialogFooter>
       </DialogContent>

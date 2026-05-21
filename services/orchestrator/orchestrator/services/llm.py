@@ -7,8 +7,8 @@ from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from orchestrator.core.database import SupabaseRunStore, get_supabase
 from orchestrator.core.config import settings
+from orchestrator.core.database import SupabaseRunStore, get_supabase
 from orchestrator.services.secrets import decrypt_secret
 
 
@@ -91,14 +91,22 @@ def _resolve_llm_config(owner_user_id: str, role: str) -> ResolvedLlmConfig:
     if provider not in {"gemini", "ollama"}:
         provider = "gemini"
 
-    model_name = str(configured.get("model") or "").strip() or _fallback_role_model(role)
+    model_name = str(configured.get("model") or "").strip() or _fallback_role_model(
+        role
+    )
     if provider == "ollama":
         return ResolvedLlmConfig(provider=provider, model_name=model_name)
 
     encrypted_api_key = str(configured.get("encrypted_api_key") or "").strip()
-    api_key = decrypt_secret(encrypted_api_key) if encrypted_api_key else settings.GOOGLE_API_KEY
+    api_key = (
+        decrypt_secret(encrypted_api_key)
+        if encrypted_api_key
+        else settings.GOOGLE_API_KEY
+    )
     if not api_key:
-        raise RuntimeError("Gemini orchestration requires a stored API key or GOOGLE_API_KEY")
+        raise RuntimeError(
+            "Gemini orchestration requires a stored API key or GOOGLE_API_KEY"
+        )
     return ResolvedLlmConfig(provider=provider, model_name=model_name, api_key=api_key)
 
 
@@ -107,6 +115,10 @@ def _build_llm(owner_user_id: str, role: str) -> GeminiService | OllamaService:
     if config.provider == "ollama":
         return OllamaService(config.model_name)
     return GeminiService(config.model_name, config.api_key or "")
+
+
+def chat_model(owner_user_id: str, role: str = "analyzer") -> Any:
+    return _build_llm(owner_user_id, role).model
 
 
 def planner_llm(owner_user_id: str) -> GeminiService | OllamaService:

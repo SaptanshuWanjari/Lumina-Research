@@ -1,6 +1,13 @@
 from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel, ConfigDict
+from typing import Any, Literal, Optional
+
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class RunCreate(BaseModel):
+    depth: Literal["quick", "standard", "deep"] = "standard"
+    citation_strictness: Literal["lenient", "strict"] = "strict"
+    human_review_enabled: bool = True
 
 
 class Run(BaseModel):
@@ -17,6 +24,7 @@ class Run(BaseModel):
     error_message: Optional[str] = None
     approved_by_user_id: Optional[str] = None
     approved_at: Optional[datetime] = None
+    run_config: dict[str, Any] = Field(default_factory=dict)
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 

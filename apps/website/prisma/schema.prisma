@@ -307,6 +307,7 @@ model Run {
   triggeredByUserId String?   @map("triggered_by_user_id") @db.Uuid
   approvedByUserId  String?   @map("approved_by_user_id") @db.Uuid
   errorMessage      String?   @map("error_message") @db.Text
+  runConfig         Json      @default("{}") @map("run_config")
   startedAt         DateTime  @default(now()) @map("started_at") @db.Timestamptz(6)
   completedAt       DateTime? @map("completed_at") @db.Timestamptz(6)
   durationMs        Int?      @map("duration_ms")

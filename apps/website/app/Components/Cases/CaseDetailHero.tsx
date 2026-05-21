@@ -22,7 +22,10 @@ export default function CaseDetailHero({ entry }: CaseDetailHeroProps) {
         </div>
 
         <div className="flex gap-2">
-          <RunConfigDialog triggerClassName="h-10 rounded-full bg-slate-950 px-5 text-sm font-semibold text-white hover:bg-slate-800" />
+          <RunConfigDialog
+            caseId={entry.id}
+            triggerClassName="h-10 rounded-full bg-slate-950 px-5 text-sm font-semibold text-white hover:bg-slate-800"
+          />
           <AddSourceDialog triggerClassName="h-10 rounded-full border-slate-300 bg-white px-5 text-sm font-semibold text-slate-800" />
         </div>
       </div>

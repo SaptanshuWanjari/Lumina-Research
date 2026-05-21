@@ -136,59 +136,41 @@ class DryRunStore:
         return self.report
 
 
-class DryRunPlanner:
-    def invoke_json(self, system: str, user: str) -> dict[str, Any]:
-        return {"research_plan": ["regional demand", "logistics risk"]}
-
-
-class DryRunAnalyzer:
-    def invoke_text(self, system: str, user: str) -> str:
-        return "Demand is rising; logistics SLA is the gating risk."
-
-
-class DryRunWriter:
-    def invoke_json(self, system: str, user: str) -> dict[str, Any]:
-        return {
-            "draft_report": "## Draft\n\nDemand is rising [1]. Logistics SLA matters [1].",
-            "summary": "Demand up; logistics is key.",
-            "citation_map": {"[1]": "chunk-dry"},
-        }
-
-
-class DryRunRetriever:
-    def __init__(self, client: object) -> None:
-        self.client = client
-
-    def retrieve(
-        self, queries: list[str], case_id: str, owner_user_id: str
-    ) -> list[dict[str, Any]]:
-        assert queries == ["regional demand", "logistics risk"]
-        assert case_id == "case-dry"
-        assert owner_user_id == "owner-dry"
-        return [
+def dry_run_deep_research(state: dict[str, Any]) -> dict[str, Any]:
+    assert state["case_id"] == "case-dry"
+    assert state["owner_user_id"] == "owner-dry"
+    return {
+        "research_plan": ["regional demand", "logistics risk"],
+        "retrieved_chunks": [
             {
                 "chunk_id": "chunk-dry",
                 "document_id": "doc-dry",
                 "source_id": "source-dry",
-                "case_id": case_id,
-                "owner_user_id": owner_user_id,
+                "case_id": state["case_id"],
+                "owner_user_id": state["owner_user_id"],
                 "content": "Regional demand grows 12% YoY when logistics SLAs are met.",
                 "score": 0.91,
                 "metadata": {"section": "summary"},
-                "query": queries[0],
+                "query": "regional demand",
                 "citation_label": "[1]",
             }
-        ]
+        ],
+        "analysis_notes": "Demand is rising; logistics SLA is the gating risk.",
+        "critique_notes": "Evidence is limited to one chunk.",
+        "draft_report": "## Draft\n\nDemand is rising [1]. Logistics SLA matters [1].",
+        "citation_map": {"[1]": "chunk-dry"},
+        "deep_research_meta": {
+            "depth": "standard",
+            "confidence": 0.74,
+            "open_questions": [],
+        },
+    }
 
 
 def test_langgraph_dry_run_interrupts_and_resumes_to_publish(monkeypatch) -> None:
     store = DryRunStore()
     monkeypatch.setattr(nodes, "_store", lambda: store)
-    monkeypatch.setattr(nodes, "planner_llm", lambda: DryRunPlanner())
-    monkeypatch.setattr(nodes, "analyzer_llm", lambda: DryRunAnalyzer())
-    monkeypatch.setattr(nodes, "writer_llm", lambda: DryRunWriter())
-    monkeypatch.setattr(nodes, "SupabaseRetriever", DryRunRetriever)
-    monkeypatch.setattr(nodes, "get_supabase", lambda: object())
+    monkeypatch.setattr(nodes, "run_deep_research", dry_run_deep_research)
 
     graph = build_graph(InMemorySaver())
     config = {"configurable": {"thread_id": "run-dry"}}
@@ -197,6 +179,7 @@ def test_langgraph_dry_run_interrupts_and_resumes_to_publish(monkeypatch) -> Non
         "case_id": "case-dry",
         "owner_user_id": "owner-dry",
         "question": "Should we open three new stores in 2026?",
+        "run_config": {"depth": "standard", "human_review_enabled": True},
     }
 
     interrupted = graph.invoke(state, config=config)
@@ -206,15 +189,14 @@ def test_langgraph_dry_run_interrupts_and_resumes_to_publish(monkeypatch) -> Non
     assert store.run["needs_review"] is True
     assert store.report is not None
     assert store.report["status"] == "draft"
-    assert [step["step_key"] for step in store.steps[:5]] == [
-        "planner",
-        "retriever",
-        "analyzer",
-        "writer",
+    assert [step["step_key"] for step in store.steps[:2]] == [
+        "deep_research",
         "human_review",
     ]
 
-    store.update_run("run-dry", "owner-dry", {"status": "resuming", "needs_review": False})
+    store.update_run(
+        "run-dry", "owner-dry", {"status": "resuming", "needs_review": False}
+    )
     completed = graph.invoke(
         Command(
             resume={

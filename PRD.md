@@ -123,20 +123,17 @@ Preferred model:
    - auth entry points
    - case/source/run/report UI
    - safe browser-facing APIs
-
-2. **Supabase Platform**
+1. **Supabase Platform**
    - relational state
    - vector storage and search
    - auth and oauth
    - optional storage buckets
    - optional realtime for run/source/report status updates
-
-3. **Python Worker Services**
+1. **Python Worker Services**
    - ingestion pipeline
    - parsing/chunking/embeddings
    - retries and error handling
-
-4. **LangGraph Orchestrator (Python)**
+1. **LangGraph Orchestrator (Python)**
    - create and resume runs
    - retrieval + synthesis + critique + citation checks
    - pause for human review
@@ -144,7 +141,7 @@ Preferred model:
 
 ### Architectural principle
 
-**Every app row is owned by a single authenticated user (`owner_user_id`).**
+**Every app row is owned by a single authenticated user (**`owner_user_id`**).**
 
 This keeps authorization simple today and remains RLS-ready for future enforcement.
 

@@ -49,6 +49,7 @@ def _start_run(run_id: str) -> dict[str, str]:
             "case_id": case_id,
             "owner_user_id": owner_user_id,
             "question": case.get("question") or case.get("title") or "",
+            "run_config": run.get("run_config") or {},
         }
         store.update_run(
             run_id,
@@ -56,7 +57,7 @@ def _start_run(run_id: str) -> dict[str, str]:
             {
                 "status": "running",
                 "needs_review": False,
-                "current_step": "planner",
+                "current_step": "deep_research",
                 "started_at": run.get("started_at") or utcnow_iso(),
                 "checkpoint_ref": run_id,
                 "checkpoint_at": utcnow_iso(),
@@ -65,7 +66,23 @@ def _start_run(run_id: str) -> dict[str, str]:
         )
         with postgres_checkpointer() as checkpointer:
             graph = build_graph(checkpointer)
-            graph.invoke(state, config={"configurable": {"thread_id": run_id}})
+            result = graph.invoke(state, config={"configurable": {"thread_id": run_id}})
+        if isinstance(result, dict) and "__interrupt__" not in result:
+            completed_at = utcnow_iso()
+            store.update_run(
+                run_id,
+                owner_user_id,
+                {
+                    "status": "complete",
+                    "needs_review": False,
+                    "current_step": "complete",
+                    "completed_at": completed_at,
+                    "duration_ms": _duration_ms(run.get("started_at")),
+                    "checkpoint_ref": run_id,
+                    "checkpoint_at": completed_at,
+                },
+            )
+            return {"run_id": run_id, "status": "complete"}
         return {"run_id": run_id, "status": "needs_review"}
     except Exception as exc:
         store.update_run(

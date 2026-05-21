@@ -15,17 +15,26 @@ export async function GET(_: NextRequest, { params }: Params) {
   return NextResponse.json(detail.runs);
 }
 
-export async function POST(_: NextRequest, { params }: Params) {
+export async function POST(request: NextRequest, { params }: Params) {
   const { caseId } = await params;
   const { accessToken } = await requireAccessToken();
+  const body = await request.json().catch(() => undefined);
   try {
-    const created = await servicesApiFetch(`/cases/${caseId}/runs`, accessToken!, {
-      method: "POST",
-    });
+    const created = await servicesApiFetch(
+      `/cases/${caseId}/runs`,
+      accessToken!,
+      {
+        method: "POST",
+        body: body ? JSON.stringify(body) : undefined,
+      },
+    );
     return NextResponse.json(created, { status: 201 });
   } catch (error) {
     if (error instanceof ServicesApiError) {
-      return NextResponse.json({ detail: error.message }, { status: error.status });
+      return NextResponse.json(
+        { detail: error.message },
+        { status: error.status },
+      );
     }
 
     return NextResponse.json(

@@ -11,20 +11,8 @@ interface DashboardLayoutProps {
   children: ReactNode;
 }
 
-function getInitialSidebarState() {
-  if (typeof document === "undefined") return true;
-  const cookie = document.cookie
-    .split(";")
-    .map((item) => item.trim())
-    .find((item) => item.startsWith("sidebar_state="));
-  if (!cookie) return true;
-
-  const value = cookie.split("=")[1];
-  return value !== "false";
-}
-
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(getInitialSidebarState);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
     <AppRealtimeProvider>

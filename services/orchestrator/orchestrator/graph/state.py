@@ -21,12 +21,14 @@ class OrchestratorState(TypedDict):
     case_id: str
     owner_user_id: str
     question: str
+    run_config: NotRequired[dict[str, Any]]
     research_plan: NotRequired[list[str]]
     retrieved_chunks: NotRequired[list[EvidenceRecord]]
     analysis_notes: NotRequired[str]
     draft_report: NotRequired[str]
     citation_map: NotRequired[dict[str, Any]]
     critique_notes: NotRequired[str]
+    deep_research_meta: NotRequired[dict[str, Any]]
     review_status: NotRequired[str]
     final_report: NotRequired[str]
     report_version_id: NotRequired[str]

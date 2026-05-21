@@ -1,9 +1,10 @@
-from fastapi import FastAPI, Depends
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.config import settings
-from app.core.security import get_current_user, TokenPayload
-from app.api.router import api_router
+
 from app.api.endpoints import health
+from app.api.router import api_router
+from app.core.config import settings
+from app.core.security import TokenPayload, get_current_user
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -20,7 +21,6 @@ if settings.BACKEND_CORS_ORIGINS:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
 
 app.include_router(health.router)
 

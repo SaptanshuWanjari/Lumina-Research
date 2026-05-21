@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from uuid import uuid4
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from supabase import Client
 
@@ -12,10 +13,9 @@ from app.core.database import (
     select_one_by_owner_and_case,
     update_by_owner,
 )
-from app.core.security import get_current_user, TokenPayload
-from app.schemas.runs import Run
-from app.services.queue import enqueue_run, enqueue_resume
-
+from app.core.security import TokenPayload, get_current_user
+from app.schemas.runs import Run, RunCreate
+from app.services.queue import enqueue_resume, enqueue_run
 
 router = APIRouter()
 
@@ -37,6 +37,7 @@ def list_runs(
 )
 def create_run(
     case_id: str,
+    run_in: RunCreate | None = None,
     current_user: TokenPayload = Depends(get_current_user),
     supabase: Client = Depends(get_supabase),
 ):
@@ -45,6 +46,7 @@ def create_run(
 
     run_id = str(uuid4())
     now = datetime.now(timezone.utc).isoformat()
+    run_config = (run_in or RunCreate()).model_dump()
     insert_data = {
         "id": run_id,
         "case_id": case_id,
@@ -52,6 +54,7 @@ def create_run(
         "status": "queued",
         "needs_review": False,
         "triggered_by_user_id": current_user.sub,
+        "run_config": run_config,
         "created_at": now,
         "updated_at": now,
         "started_at": now,

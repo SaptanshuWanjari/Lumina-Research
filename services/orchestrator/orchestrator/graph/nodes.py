@@ -8,11 +8,12 @@ from langgraph.types import interrupt
 from orchestrator.core.config import settings
 from orchestrator.core.database import SupabaseRunStore, get_supabase
 from orchestrator.graph.state import OrchestratorState
+from orchestrator.services.deep_research import run_deep_research
 from orchestrator.services.llm import analyzer_llm, planner_llm, writer_llm
 from orchestrator.services.retriever import SupabaseRetriever
 
-
 STEP_ORDER = {
+    "deep_research": 1,
     "planner": 1,
     "retriever": 2,
     "analyzer": 3,
@@ -24,6 +25,67 @@ STEP_ORDER = {
 
 def _store() -> SupabaseRunStore:
     return SupabaseRunStore(get_supabase())
+
+
+def deep_research_node(state: OrchestratorState) -> dict[str, Any]:
+    store = _store()
+    run_config = state.get("run_config") or {}
+    started = store.start_step(
+        state["run_id"],
+        state["owner_user_id"],
+        "deep_research",
+        STEP_ORDER["deep_research"],
+        "Plan, retrieve, critique, and draft with Deep Agents",
+        {"question": state["question"], "run_config": run_config},
+    )
+    result = run_deep_research(state)
+    chunks = result.get("retrieved_chunks", [])
+    meta = result.get("deep_research_meta", {})
+    store.finish_step(
+        state["run_id"],
+        state["owner_user_id"],
+        "deep_research",
+        started,
+        {
+            "depth": meta.get("depth"),
+            "evidence_count": len(chunks),
+            "confidence": meta.get("confidence"),
+            "open_question_count": len(meta.get("open_questions") or []),
+        },
+    )
+    store.write_artifact(
+        state["run_id"],
+        state["case_id"],
+        state["owner_user_id"],
+        "trace",
+        "Deep research plan",
+        {
+            "research_plan": result.get("research_plan", []),
+            "critique_notes": result.get("critique_notes", ""),
+            "meta": meta,
+        },
+    )
+    store.write_artifact(
+        state["run_id"],
+        state["case_id"],
+        state["owner_user_id"],
+        "retrieval_set",
+        "Retrieved evidence",
+        {"chunks": chunks},
+    )
+    store.write_artifact(
+        state["run_id"],
+        state["case_id"],
+        state["owner_user_id"],
+        "draft_report",
+        "Draft report",
+        {
+            "content_markdown": result.get("draft_report", ""),
+            "summary": str(result.get("analysis_notes", ""))[:2000],
+            "citations": result.get("citation_map", {}),
+        },
+    )
+    return result
 
 
 def planner_node(state: OrchestratorState) -> dict[str, Any]:
@@ -168,6 +230,7 @@ def writer_node(state: OrchestratorState) -> dict[str, Any]:
 
 def human_review_node(state: OrchestratorState) -> dict[str, Any]:
     store = _store()
+    run_config = state.get("run_config") or {}
     run = store.get_run_for_owner(state["run_id"], state["owner_user_id"])
     if run.get("status") == "resuming":
         report = store.latest_report_version(
@@ -210,6 +273,19 @@ def human_review_node(state: OrchestratorState) -> dict[str, Any]:
         state.get("draft_report", ""),
         {"citations": state.get("citation_map", {})},
     )
+    if run_config.get("human_review_enabled") is False:
+        store.finish_step(
+            state["run_id"],
+            state["owner_user_id"],
+            "human_review",
+            started,
+            {"report_version_id": report.get("id"), "skipped": True},
+        )
+        return {
+            "review_status": "skipped",
+            "final_report": state.get("draft_report", ""),
+            "report_version_id": str(report.get("id") or ""),
+        }
     store.finish_step(
         state["run_id"],
         state["owner_user_id"],
@@ -261,7 +337,9 @@ def publish_node(state: OrchestratorState) -> dict[str, Any]:
     draft = store.latest_report_version(
         state["case_id"], state["run_id"], state["owner_user_id"], "draft"
     )
-    final_markdown = state.get("final_report") or (draft or {}).get("content_markdown") or ""
+    final_markdown = (
+        state.get("final_report") or (draft or {}).get("content_markdown") or ""
+    )
     started = store.start_step(
         state["run_id"],
         state["owner_user_id"],
