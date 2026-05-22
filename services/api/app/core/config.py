@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     WORKER_INGEST_TASK: str = "worker.tasks.ingestion.process_source"
     ORCHESTRATOR_RUN_TASK: str = "orchestrator.tasks.runs.start_run"
     ORCHESTRATOR_RESUME_TASK: str = "orchestrator.tasks.runs.resume_run"
+    ORCHESTRATOR_RETRY_TASK: str = "orchestrator.tasks.runs.retry_run"
 
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", case_sensitive=True, extra="ignore"

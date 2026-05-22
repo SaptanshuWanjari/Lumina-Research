@@ -31,3 +31,11 @@ def enqueue_resume(run_id: str) -> None:
         args=[run_id],
         queue=settings.ORCHESTRATOR_QUEUE_NAME,
     )
+
+
+def enqueue_retry(run_id: str) -> None:
+    celery_app.send_task(
+        settings.ORCHESTRATOR_RETRY_TASK,
+        args=[run_id],
+        queue=settings.ORCHESTRATOR_QUEUE_NAME,
+    )

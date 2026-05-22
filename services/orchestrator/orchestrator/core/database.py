@@ -109,6 +109,8 @@ class SupabaseRunStore:
             "input_json": input_json or {},
             "error_message": None,
             "started_at": now,
+            "completed_at": None,
+            "duration_ms": None,
             "updated_at": now,
         }
         updated = response_rows(
@@ -161,6 +163,25 @@ class SupabaseRunStore:
             owner_user_id,
             {"current_step": step_key, "checkpoint_ref": run_id, "checkpoint_at": now},
         )
+
+    def fail_step(
+        self,
+        run_id: str,
+        owner_user_id: str,
+        step_key: str,
+        error_message: str,
+    ) -> None:
+        now = utcnow_iso()
+        self.client.table("run_steps").update(
+            {
+                "status": "failed",
+                "error_message": error_message,
+                "completed_at": now,
+                "updated_at": now,
+            }
+        ).eq("run_id", run_id).eq("owner_user_id", owner_user_id).eq(
+            "step_key", step_key
+        ).execute()
 
     def write_artifact(
         self,

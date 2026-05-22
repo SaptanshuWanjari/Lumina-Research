@@ -15,4 +15,5 @@ celery_app.conf.task_queues = (Queue(settings.ORCHESTRATOR_QUEUE_NAME),)
 celery_app.conf.task_routes = {
     "orchestrator.tasks.runs.start_run": {"queue": settings.ORCHESTRATOR_QUEUE_NAME},
     "orchestrator.tasks.runs.resume_run": {"queue": settings.ORCHESTRATOR_QUEUE_NAME},
+    "orchestrator.tasks.runs.retry_run": {"queue": settings.ORCHESTRATOR_QUEUE_NAME},
 }

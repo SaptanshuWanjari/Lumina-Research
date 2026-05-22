@@ -15,7 +15,7 @@ from app.core.database import (
 )
 from app.core.security import TokenPayload, get_current_user
 from app.schemas.runs import Run, RunCreate
-from app.services.queue import enqueue_resume, enqueue_run
+from app.services.queue import enqueue_resume, enqueue_retry, enqueue_run
 
 router = APIRouter()
 
@@ -130,5 +130,43 @@ def approve_run(
             {"status": "failed", "error_message": f"enqueue_failed: {exc}"},
         )
         raise HTTPException(status_code=500, detail="Failed to enqueue resume task")
+
+    return record
+
+
+@router.post("/runs/{run_id}/retry", response_model=Run)
+def retry_run(
+    run_id: str,
+    current_user: TokenPayload = Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    existing = select_one_by_owner(supabase, "runs", run_id, current_user.sub)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Run not found or access denied")
+    if existing.get("status") != "failed":
+        raise HTTPException(status_code=409, detail="Only failed runs can be retried")
+
+    update = {
+        "status": "queued",
+        "needs_review": False,
+        "error_message": None,
+    }
+
+    try:
+        record = update_by_owner(supabase, "runs", run_id, current_user.sub, update)
+    except RuntimeError:
+        raise HTTPException(status_code=500, detail="Failed to queue retry")
+
+    try:
+        enqueue_retry(run_id)
+    except Exception as exc:
+        update_by_owner(
+            supabase,
+            "runs",
+            run_id,
+            current_user.sub,
+            {"status": "failed", "error_message": f"enqueue_failed: {exc}"},
+        )
+        raise HTTPException(status_code=500, detail="Failed to enqueue retry task")
 
     return record

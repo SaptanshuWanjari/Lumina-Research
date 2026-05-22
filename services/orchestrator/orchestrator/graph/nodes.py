@@ -14,12 +14,12 @@ from orchestrator.services.retriever import SupabaseRetriever
 
 STEP_ORDER = {
     "deep_research": 1,
+    "human_review": 2,
+    "publish": 3,
     "planner": 1,
     "retriever": 2,
     "analyzer": 3,
     "writer": 4,
-    "human_review": 5,
-    "publish": 6,
 }
 
 

@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import DashboardLayout from "../../../Components/Layout/DashboardLayout";
 import { MarkdownRenderer } from "@/app/Components/Report/MarkdownRenderer";
 import { ApproveRunButton } from "@/app/Components/Runs/ApproveRunButton";
+import { RetryButton } from "@/app/Components/Runs/RetryButton";
+import { RunLiveStatus } from "@/app/Components/Runs/RunLiveStatus";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getRunDetail } from "@/lib/server/data";
@@ -39,6 +41,34 @@ function formatLabel(value: string) {
 
 function formatScore(value: unknown) {
   return typeof value === "number" ? value.toFixed(2) : "n/a";
+}
+
+function displayStepOrder(stepKey: string, fallback: number) {
+  const order: Record<string, number> = {
+    deep_research: 1,
+    human_review: 2,
+    publish: 3,
+  };
+  return order[stepKey] ?? fallback;
+}
+
+function stepActivityText(stepKey: string, status: string) {
+  if (status === "running") {
+    switch (stepKey) {
+      case "deep_research":
+        return "Planning research, retrieving evidence, critiquing gaps, and drafting the report.";
+      case "human_review":
+        return "Preparing the draft review checkpoint.";
+      case "publish":
+        return "Publishing the approved report version.";
+      default:
+        return "Working on this step.";
+    }
+  }
+  if (status === "failed") return "This is the failed step. Retry will restart here.";
+  if (status === "paused") return "Waiting for human review.";
+  if (status === "success") return "Step completed.";
+  return "Step has been recorded.";
 }
 
 function artifactGroupLabel(artifactType: string) {
@@ -505,8 +535,16 @@ export default async function RunPage(props: PageProps<"/runs/[runId]">) {
                 <p className="mt-3 text-slate-600">
                   Current step: {detail.run.currentStep ?? "unknown"}
                 </p>
+                <RunLiveStatus
+                  runId={detail.run.id}
+                  initialStatus={detail.run.status}
+                  initialCurrentStep={detail.run.currentStep}
+                />
               </div>
-              {detail.run.needsReview ? <ApproveRunButton runId={detail.run.id} /> : null}
+              <div className="flex flex-col items-start gap-2 lg:items-end">
+                {detail.run.needsReview ? <ApproveRunButton runId={detail.run.id} /> : null}
+                {detail.run.status === "failed" ? <RetryButton runId={detail.run.id} /> : null}
+              </div>
             </div>
             <div className="mt-5 grid gap-4 md:grid-cols-4">
               <article className="rounded-[13px] bg-slate-50 p-4">
@@ -612,14 +650,16 @@ export default async function RunPage(props: PageProps<"/runs/[runId]">) {
               </span>
             </summary>
             <div className="mt-4 space-y-3">
-              {detail.steps.map((step) => (
+              {[...detail.steps]
+                .sort((left, right) => displayStepOrder(left.stepKey, left.stepOrder) - displayStepOrder(right.stepKey, right.stepOrder))
+                .map((step) => (
                 <article
                   key={step.id}
                   className="rounded-[13px] border border-slate-200 bg-slate-50 px-4 py-3"
                 >
                   <div className="flex items-center justify-between gap-4">
                     <p className="font-semibold text-slate-900">
-                      {step.stepOrder}. {step.stepKey}
+                      {displayStepOrder(step.stepKey, step.stepOrder)}. {step.stepKey}
                     </p>
                     <Badge className={STATUS_CLASS[step.status] ?? "bg-slate-100 text-slate-700"}>
                       {step.status}
@@ -627,6 +667,9 @@ export default async function RunPage(props: PageProps<"/runs/[runId]">) {
                   </div>
                   <p className="mt-2 text-sm text-slate-600">
                     {step.goal ?? "No goal recorded."}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {stepActivityText(step.stepKey, step.status)}
                   </p>
                   {step.errorMessage ? (
                     <p className="mt-2 text-sm text-rose-700">{step.errorMessage}</p>
