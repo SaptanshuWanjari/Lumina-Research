@@ -7,10 +7,15 @@ import {
 } from "@/components/ui/accordion";
 const FAQ = () => {
   const faqs = [
+    // {
+    //   question: "How does AnalystAI ensure data privacy?",
+    //   answer:
+    //     "We employ enterprise-grade SOC2 compliance measures. Your data is encrypted at rest and in transit, and we never use your proprietary research to train our foundation models.",
+    // },
     {
-      question: "How does AnalystAI ensure data privacy?",
+      question: "Can I bring my own API key?",
       answer:
-        "We employ enterprise-grade SOC2 compliance measures. Your data is encrypted at rest and in transit, and we never use your proprietary research to train our foundation models.",
+        "Yes, you can easily integrate your own API key to access the language models of your choice, giving you full control over your research environment.",
     },
     {
       question: "Can I export reports to PDF or Word?",
@@ -48,7 +53,7 @@ const FAQ = () => {
                   ></span>
                 </AccordionTrigger>
                 <AccordionContent className="bg-white rounded-b-2xl px-8  py-6">
-                  <p className="text-on-surface-variant leading-relaxed">
+                  <p className="text-on-surface-variant text-start leading-relaxed">
                     {faq.answer}
                   </p>
                 </AccordionContent>

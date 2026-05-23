@@ -31,10 +31,10 @@ const Footer = () => {
       <div className="max-w-7xl mx-auto grid md:grid-cols-4 gap-12">
         <div className="space-y-6">
           <span className="text-2xl font-bold tracking-tighter text-zinc-900">
-            AnalystAI
+            Lumina Research
           </span>
           <p className="text-on-surface-variant text-sm leading-relaxed">
-            The intelligent workspace for high-stakes financial research and
+            The intelligent workspace for deep agentic research and
             automated reasoning.
           </p>
         </div>
