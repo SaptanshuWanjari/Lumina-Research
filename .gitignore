@@ -139,3 +139,5 @@ services/**/build/
 *.bak
 *.orig
 .vercel
+dump.rdb
+.antigravitycli

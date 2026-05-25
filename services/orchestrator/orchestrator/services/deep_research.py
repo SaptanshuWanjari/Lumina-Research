@@ -4,7 +4,7 @@ import json
 import re
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from orchestrator.core.database import get_supabase
 from orchestrator.graph.state import EvidenceRecord, OrchestratorState
@@ -19,6 +19,38 @@ class DeepResearchResponse(BaseModel):
     citation_map: dict[str, Any] = Field(default_factory=dict)
     confidence: float = 0.0
     open_questions: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def preprocess_llm_json(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            for field in ["draft_report", "analysis_notes", "critique_notes"]:
+                val = data.get(field)
+                if isinstance(val, dict):
+                    md = []
+                    for k, v in val.items():
+                        title = str(k).replace("_", " ").title()
+                        if isinstance(v, list):
+                            v_str = "\n".join(f"- {x}" for x in v)
+                        else:
+                            v_str = str(v)
+                        md.append(f"## {title}\n{v_str}")
+                    data[field] = "\n\n".join(md)
+                elif isinstance(val, list):
+                    data[field] = "\n\n".join(str(x) for x in val)
+            
+            for list_field in ["research_plan", "open_questions"]:
+                items = data.get(list_field)
+                if isinstance(items, list):
+                    clean = []
+                    for item in items:
+                        if isinstance(item, dict):
+                            extracted = next((str(v) for v in item.values() if isinstance(v, str)), str(item))
+                            clean.append(extracted)
+                        else:
+                            clean.append(str(item))
+                    data[list_field] = clean
+        return data
 
 
 def _depth_config(run_config: dict[str, Any] | None) -> dict[str, Any]:
@@ -167,7 +199,7 @@ Workflow:
 6. Write /draft_report.md as a deep professional markdown report of at least {config["min_words"]} words.
 7. Return final JSON matching the requested schema.
 
-The draft_report must not be a short summary. It must include these sections:
+The draft_report must not be a short summary. It must be a single markdown string (NOT a nested JSON object). It must include these sections using markdown headings (##):
 - Executive Summary
 - Research Plan
 - Evidence-Backed Findings

@@ -133,7 +133,7 @@ async def create_source(
         except ValueError as exc:
             raise HTTPException(status_code=400, detail="Invalid JSON body") from exc
 
-        content_for_hash = payload.url if payload.source_type == "url" else payload.note_text
+        content_for_hash = payload.url if payload.source_type in ("url", "n8n") else payload.note_text
         insert_data.update(
             {
                 "source_type": payload.source_type,
@@ -157,7 +157,7 @@ async def create_source(
         except ValidationError as exc:
             raise HTTPException(status_code=400, detail=exc.errors()) from exc
 
-        content_for_hash = payload.url if payload.source_type == "url" else payload.note_text
+        content_for_hash = payload.url if payload.source_type in ("url", "n8n") else payload.note_text
         insert_data.update(
             {
                 "source_type": payload.source_type,

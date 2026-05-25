@@ -39,9 +39,9 @@ export function RunLiveStatus({
   return (
     <div className="mt-3 rounded-[13px] border border-slate-200 bg-slate-50 px-4 py-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Badge className={STATUS_CLASS[status] ?? "bg-slate-100 text-slate-700"}>
-          {status}
-        </Badge>
+        {/* <Badge className={STATUS_CLASS[status] ?? "bg-slate-100 text-slate-700"}> */}
+        {/*   {status} */}
+        {/* </Badge> */}
         <span className="rounded-full bg-white px-3 py-1 text-xs text-slate-600 ring-1 ring-slate-200">
           {connected ? "Live updates on" : "Waiting for live updates"}
         </span>
@@ -51,9 +51,6 @@ export function RunLiveStatus({
         <span className="font-semibold text-slate-950">
           {currentStep ?? "queued"}
         </span>
-      </p>
-      <p className="mt-1 text-xs text-slate-500">
-        This panel refreshes when the run row changes in Supabase.
       </p>
     </div>
   );

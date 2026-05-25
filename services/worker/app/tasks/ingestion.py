@@ -305,6 +305,23 @@ def _load_source_text(
         if not url:
             raise RuntimeError("URL source missing url")
         return fetch_url_text(url)
+    if source_type == "n8n":
+        url = source.get("url")
+        if not url:
+            raise RuntimeError("n8n source missing webhook url")
+        payload = {"case_id": source.get("case_id"), "source_id": source.get("id")}
+        try:
+            resp = httpx.post(url, json=payload, timeout=60.0)
+            resp.raise_for_status()
+            data = resp.json()
+            text = data.get("text") or data.get("content") or data.get("markdown")
+            if not text:
+                raise RuntimeError("n8n webhook response missing text, content, or markdown field")
+            return normalize_text(text), "n8n", "text/plain"
+        except httpx.HTTPError as exc:
+            raise RuntimeError(f"n8n webhook request failed: {exc}")
+        except ValueError as exc:
+            raise RuntimeError(f"n8n webhook response was not valid JSON: {exc}")
     if source_type == "file":
         storage_path = source.get("storage_path")
         if not storage_path:

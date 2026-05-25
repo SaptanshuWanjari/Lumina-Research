@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Link2, Upload, FileText } from "lucide-react";
+import { Link2, Upload, FileText, Workflow } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -53,14 +53,14 @@ export default function AddSourceDialog({
         method: "POST",
         body: formData,
       });
-    } else if (tab === "url") {
+    } else if (tab === "url" || tab === "n8n") {
       response = await fetch(`/api/cases/${caseId}/sources`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          source_type: "url",
+          source_type: tab,
           title: title || null,
           url,
         }),
@@ -118,7 +118,7 @@ export default function AddSourceDialog({
           </DialogDescription>
         </DialogHeader>
         <Tabs value={tab} onValueChange={setTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 rounded-full bg-slate-100">
+          <TabsList className="grid w-full grid-cols-4 rounded-full bg-slate-100">
             <TabsTrigger value="url">
               <Link2 className="size-4" />
               URL
@@ -130,6 +130,10 @@ export default function AddSourceDialog({
             <TabsTrigger value="paste">
               <FileText className="size-4" />
               Paste text
+            </TabsTrigger>
+            <TabsTrigger value="n8n">
+              <Workflow className="size-4" />
+              n8n
             </TabsTrigger>
           </TabsList>
           <TabsContent value="url" className="space-y-3 pt-4">
@@ -172,6 +176,27 @@ export default function AddSourceDialog({
               Paste long-form notes, analyst summaries, or extracted content.
             </p>
           </TabsContent>
+          <TabsContent value="n8n" className="space-y-3 pt-4">
+            <Input
+              placeholder="Workflow title (optional)"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+            />
+            <Input
+              placeholder="n8n Webhook URL"
+              value={url}
+              onChange={(event) => setUrl(event.target.value)}
+            />
+            <div className="rounded-lg bg-blue-50 p-3 text-xs text-blue-800">
+              <p className="mb-2 font-semibold">n8n Workflow Requirements:</p>
+              <ul className="list-inside list-disc space-y-1">
+                <li>Use a <strong>Webhook Trigger</strong> (supports POST requests).</li>
+                <li>Respond <strong>synchronously</strong> with a "Respond to Webhook" node.</li>
+                <li>Return valid <strong>JSON</strong> containing a <code>text</code>, <code>content</code>, or <code>markdown</code> field.</li>
+                <li><strong>Tip:</strong> Use a Function node to validate/clean JSON before responding.</li>
+              </ul>
+            </div>
+          </TabsContent>
         </Tabs>
         {error ? <p className="text-sm text-rose-600">{error}</p> : null}
         <DialogFooter>
@@ -181,7 +206,7 @@ export default function AddSourceDialog({
             disabled={
               !caseId ||
               submitting ||
-              (tab === "url" ? !url : tab === "file" ? !file : !noteText)
+              (tab === "url" || tab === "n8n" ? !url : tab === "file" ? !file : !noteText)
             }
           >
             {submitting ? "Adding..." : "Add Source"}

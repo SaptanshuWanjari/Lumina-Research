@@ -102,7 +102,12 @@ def planner_node(state: OrchestratorState) -> dict[str, Any]:
         "Return strict JSON with key research_plan: array of 3-6 concise retrieval queries.",
         f"Case question:\n{state['question']}",
     )
-    plan = [str(item) for item in result.get("research_plan", []) if str(item).strip()]
+    def _extract_str(item: Any) -> str:
+        if isinstance(item, dict):
+            return str(next((v for v in item.values() if isinstance(v, str)), item))
+        return str(item)
+    
+    plan = [_extract_str(item) for item in result.get("research_plan", []) if _extract_str(item).strip()]
     if not plan:
         plan = [state["question"]]
     store.finish_step(
