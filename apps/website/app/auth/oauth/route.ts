@@ -58,8 +58,6 @@ export async function GET(request: NextRequest) {
   // over to the new redirect response, including all options!
   response.cookies.getAll().forEach((cookie) => {
     redirectResponse.cookies.set({
-      name: cookie.name,
-      value: cookie.value,
       ...cookie
     });
   });
