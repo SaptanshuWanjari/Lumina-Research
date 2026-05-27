@@ -16,6 +16,7 @@ from app.core.database import (
     utcnow_iso,
 )
 from app.utils.embeddings import GeminiEmbedder, vector_literal
+from app.utils.secrets import decrypt_secret
 from app.utils.storage import download_source_file
 from app.utils.text import (
     extract_file_text,
@@ -51,6 +52,35 @@ class IngestionStore:
 
     def update_case_status(self, case_id: str, owner_user_id: str, status: str) -> None:
         update_owned(self.client, "cases", case_id, owner_user_id, {"status": status})
+
+    def get_ai_settings(self, owner_user_id: str) -> dict[str, Any] | None:
+        return response_one(
+            self.client.table("ai_settings")
+            .select("*")
+            .eq("owner_user_id", owner_user_id)
+            .execute()
+        )
+
+    def resolve_embeddings_key(self, owner_user_id: str) -> str:
+        configured = self.get_ai_settings(owner_user_id) or {}
+        provider = str(configured.get("provider") or "gemini").strip().lower()
+        reuse_key = configured.get("reuse_api_key_for_embeddings")
+        reuse = True if reuse_key is None else bool(reuse_key)
+
+        if reuse:
+            if provider != "gemini":
+                raise RuntimeError(
+                    "Embeddings key reuse is only supported with the Gemini provider"
+                )
+            encrypted = str(configured.get("encrypted_api_key") or "").strip()
+            if not encrypted:
+                raise RuntimeError("Embeddings require a stored Gemini API key")
+            return decrypt_secret(encrypted)
+
+        encrypted = str(configured.get("encrypted_embeddings_api_key") or "").strip()
+        if not encrypted:
+            raise RuntimeError("Embeddings require a stored API key")
+        return decrypt_secret(encrypted)
 
     def start_attempt(self, source: dict[str, Any]) -> dict[str, Any]:
         rows = response_rows(
@@ -236,7 +266,8 @@ def _process_source(source_id: str) -> dict[str, Any]:
 
         store.update_source(source_id, owner_user_id, {"status": "embedding"})
         store.update_attempt(attempt_id, owner_user_id, {"stage": "embed"})
-        embeddings = GeminiEmbedder().embed_documents(chunks)
+        embeddings_key = store.resolve_embeddings_key(owner_user_id)
+        embeddings = GeminiEmbedder(embeddings_key).embed_documents(chunks)
 
         store.update_attempt(attempt_id, owner_user_id, {"stage": "index"})
         document_id, chunk_count = store.replace_document_and_chunks(

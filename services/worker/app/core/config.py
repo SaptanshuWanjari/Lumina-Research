@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/1"
     WORKER_QUEUE_NAME: str = "worker"
 
+    AI_SETTINGS_ENCRYPTION_KEY: str = ""
     GOOGLE_API_KEY: str = ""
     GEMINI_EMBEDDING_MODEL: str = "models/gemini-embedding-001"
     GEMINI_EMBEDDING_DIMENSIONS: int = 1536

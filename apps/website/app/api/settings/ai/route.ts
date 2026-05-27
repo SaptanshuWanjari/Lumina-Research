@@ -56,7 +56,10 @@ export async function PUT(request: NextRequest) {
         ? reuseApiKeyForEmbeddings
         : current.reuseApiKeyForEmbeddings;
     const hasProviderKey = Boolean(apiKey) || current.hasStoredApiKey;
-    const hasEmbeddingsKey = Boolean(embeddingsApiKey) || current.hasStoredEmbeddingsApiKey;
+    const clearsEmbeddingsKey = clearEmbeddingsApiKey && !embeddingsApiKey;
+    const hasEmbeddingsKey =
+      Boolean(embeddingsApiKey) ||
+      (current.hasStoredEmbeddingsApiKey && !clearsEmbeddingsKey);
 
     if (requiresProviderKey && !apiKey && !clearApiKey && !current.hasStoredApiKey) {
       return NextResponse.json(

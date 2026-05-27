@@ -171,6 +171,9 @@ model AiSettings {
   model            String
   encryptedApiKey  String?  @map("encrypted_api_key")
   apiKeyLastFour   String?  @map("api_key_last_four")
+  encryptedEmbeddingsApiKey String? @map("encrypted_embeddings_api_key")
+  embeddingsApiKeyLastFour  String? @map("embeddings_api_key_last_four")
+  reuseApiKeyForEmbeddings  Boolean @default(true) @map("reuse_api_key_for_embeddings")
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 

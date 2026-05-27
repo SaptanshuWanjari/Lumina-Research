@@ -6,9 +6,9 @@ from app.core.config import settings
 
 
 class GeminiEmbedder:
-    def __init__(self) -> None:
-        if not settings.GOOGLE_API_KEY:
-            raise RuntimeError("GOOGLE_API_KEY is required for Gemini embeddings")
+    def __init__(self, api_key: str) -> None:
+        if not api_key:
+            raise RuntimeError("Gemini embeddings require a stored API key")
         try:
             from langchain_google_genai import GoogleGenerativeAIEmbeddings
         except ImportError as exc:
@@ -18,7 +18,7 @@ class GeminiEmbedder:
 
         kwargs: dict[str, Any] = {
             "model": settings.GEMINI_EMBEDDING_MODEL,
-            "api_key": settings.GOOGLE_API_KEY,
+            "api_key": api_key,
         }
         try:
             self.client = GoogleGenerativeAIEmbeddings(

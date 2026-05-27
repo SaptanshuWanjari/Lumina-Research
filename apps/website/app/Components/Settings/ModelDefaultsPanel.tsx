@@ -31,6 +31,10 @@ export default function ModelDefaultsPanel({
   const [provider, setProvider] = useState<AiProvider>(initialSettings.provider);
   const [model, setModel] = useState(initialSettings.model);
   const [apiKey, setApiKey] = useState("");
+  const [embeddingsApiKey, setEmbeddingsApiKey] = useState("");
+  const [reuseEmbeddingsKey, setReuseEmbeddingsKey] = useState(
+    initialSettings.reuseApiKeyForEmbeddings,
+  );
   const [clearStoredApiKey, setClearStoredApiKey] = useState(false);
   const [savedSettings, setSavedSettings] = useState(initialSettings);
   const [message, setMessage] = useState<string | null>(null);
@@ -55,6 +59,8 @@ export default function ModelDefaultsPanel({
           provider,
           model,
           apiKey,
+          embeddingsApiKey,
+          reuseApiKeyForEmbeddings: reuseEmbeddingsKey,
           clearApiKey: clearStoredApiKey,
         }),
       });
@@ -74,6 +80,8 @@ export default function ModelDefaultsPanel({
       const nextSettings = payload as AiSettingsSummary;
       setSavedSettings(nextSettings);
       setApiKey("");
+      setEmbeddingsApiKey("");
+      setReuseEmbeddingsKey(nextSettings.reuseApiKeyForEmbeddings);
       setClearStoredApiKey(false);
       setMessage("AI settings saved. New runs will use this provider and model.");
     } catch (saveError) {
@@ -122,6 +130,11 @@ export default function ModelDefaultsPanel({
                   setProvider(nextProvider);
                   setModel(defaultModelForProvider(nextProvider));
                   setClearStoredApiKey(false);
+                  if (nextProvider !== "gemini") {
+                    setReuseEmbeddingsKey(false);
+                  } else if (provider !== "gemini") {
+                    setReuseEmbeddingsKey(true);
+                  }
                   setMessage(null);
                   setError(null);
                 }}
@@ -220,6 +233,60 @@ export default function ModelDefaultsPanel({
                 Remove any previously stored remote-provider key.
               </label>
             )}
+          </div>
+
+          <div className="space-y-3 rounded-[16px] border border-slate-200 bg-white/70 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-slate-800">Embeddings key</p>
+              {savedSettings.hasStoredEmbeddingsApiKey ? (
+                <p className="text-xs text-slate-500">
+                  Stored: ••••{savedSettings.embeddingsApiKeyLastFour ?? "saved"}
+                </p>
+              ) : (
+                <p className="text-xs text-slate-500">No key stored</p>
+              )}
+            </div>
+
+            <label className="flex items-center gap-2 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                className="size-4 rounded border-slate-300"
+                checked={reuseEmbeddingsKey}
+                onChange={(event) => {
+                  setReuseEmbeddingsKey(event.target.checked);
+                  setMessage(null);
+                  setError(null);
+                }}
+                disabled={provider !== "gemini"}
+              />
+              Use the same Gemini key for embeddings.
+            </label>
+            {provider !== "gemini" ? (
+              <p className="text-xs text-slate-500">
+                Embeddings currently use Gemini; provide a Gemini key below.
+              </p>
+            ) : (
+              <p className="text-xs text-slate-500">
+                {reuseEmbeddingsKey
+                  ? "Embeddings will reuse the main Gemini key."
+                  : "Store a separate Gemini key for embeddings."}
+              </p>
+            )}
+
+            {!reuseEmbeddingsKey ? (
+              <Input
+                value={embeddingsApiKey}
+                onChange={(event) => {
+                  setEmbeddingsApiKey(event.target.value);
+                  setMessage(null);
+                  setError(null);
+                }}
+                type="password"
+                autoComplete="off"
+                placeholder="AIza..."
+                className="h-11 rounded-full border-slate-200 bg-white px-4"
+              />
+            ) : null}
           </div>
 
           <Button

@@ -5,28 +5,50 @@ from typing import Any
 from supabase import Client
 
 from orchestrator.core.config import settings
-from orchestrator.core.database import response_rows
+from orchestrator.core.database import SupabaseRunStore, get_supabase, response_rows
 from orchestrator.graph.state import EvidenceRecord
+from orchestrator.services.secrets import decrypt_secret
 
 
 class SupabaseRetriever:
     def __init__(self, client: Client):
         self.client = client
         self._embedder: Any | None = None
+        self._embedder_key: str | None = None
 
-    def _embedding_client(self) -> Any:
-        if self._embedder is None:
+    def _resolve_embeddings_key(self, owner_user_id: str) -> str:
+        configured = SupabaseRunStore(get_supabase()).get_ai_settings(owner_user_id) or {}
+        provider = str(configured.get("provider") or "gemini").strip().lower()
+        reuse_key = configured.get("reuse_api_key_for_embeddings")
+        reuse = True if reuse_key is None else bool(reuse_key)
+
+        if reuse:
+            if provider != "gemini":
+                raise RuntimeError(
+                    "Embeddings key reuse is only supported with the Gemini provider"
+                )
+            encrypted = str(configured.get("encrypted_api_key") or "").strip()
+            if not encrypted:
+                raise RuntimeError("Embeddings require a stored Gemini API key")
+            return decrypt_secret(encrypted)
+
+        encrypted = str(configured.get("encrypted_embeddings_api_key") or "").strip()
+        if not encrypted:
+            raise RuntimeError("Embeddings require a stored API key")
+        return decrypt_secret(encrypted)
+
+    def _embedding_client(self, owner_user_id: str) -> Any:
+        api_key = self._resolve_embeddings_key(owner_user_id)
+        if self._embedder is None or self._embedder_key != api_key:
             try:
                 from langchain_google_genai import GoogleGenerativeAIEmbeddings
             except ImportError as exc:
                 raise RuntimeError(
                     "langchain-google-genai is required for Gemini embeddings"
                 ) from exc
-            if not settings.GOOGLE_API_KEY:
-                raise RuntimeError("GOOGLE_API_KEY is required for retrieval embeddings")
             kwargs = {
                 "model": settings.GEMINI_EMBEDDING_MODEL,
-                "api_key": settings.GOOGLE_API_KEY,
+                "api_key": api_key,
             }
             try:
                 self._embedder = GoogleGenerativeAIEmbeddings(
@@ -35,6 +57,7 @@ class SupabaseRetriever:
                 )
             except TypeError:
                 self._embedder = GoogleGenerativeAIEmbeddings(**kwargs)
+            self._embedder_key = api_key
         return self._embedder
 
     def retrieve(
@@ -42,7 +65,7 @@ class SupabaseRetriever:
     ) -> list[EvidenceRecord]:
         records: list[EvidenceRecord] = []
         seen: set[str] = set()
-        embedder = self._embedding_client()
+        embedder = self._embedding_client(owner_user_id)
 
         for query in queries:
             embedding = embedder.embed_query(query)

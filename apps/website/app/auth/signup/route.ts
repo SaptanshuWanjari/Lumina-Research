@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { appRoutes } from "@/lib/app-routes";
+import { resolveRedirectPath } from "@/lib/server/redirects";
 import { getRouteHandlerSupabaseClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
@@ -13,6 +14,14 @@ export async function POST(request: NextRequest) {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
   const fullName = String(formData.get("fullName") ?? "");
+  const redirectPath = resolveRedirectPath(
+    typeof formData.get("redirectTo") === "string"
+      ? String(formData.get("redirectTo"))
+      : null,
+    appRoutes.dashboard,
+  );
+  const emailRedirect = new URL("/auth/callback", request.url);
+  emailRedirect.searchParams.set("redirectTo", redirectPath);
 
   const { error } = await supabase.auth.signUp({
     email,
@@ -21,12 +30,16 @@ export async function POST(request: NextRequest) {
       data: {
         full_name: fullName,
       },
-      emailRedirectTo: new URL("/auth/callback", request.url).toString(),
+      emailRedirectTo: emailRedirect.toString(),
     },
   });
-  const redirectTo = new URL(error ? appRoutes.signup : appRoutes.dashboard, request.url);
+  const redirectTo = new URL(
+    error ? appRoutes.signup : redirectPath,
+    request.url,
+  );
   if (error) {
     redirectTo.searchParams.set("error", error.message);
+    redirectTo.searchParams.set("redirectTo", redirectPath);
   }
   return NextResponse.redirect(redirectTo);
 }

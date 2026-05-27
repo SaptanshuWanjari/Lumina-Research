@@ -6,10 +6,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /services/api
 
-RUN pip install --upgrade pip
+RUN pip install --upgrade pip uv
+
+COPY services/api/pyproject.toml services/api/uv.lock ./
+RUN uv export --frozen --no-dev --format requirements-txt > requirements.txt \
+    && pip install -r requirements.txt
 
 COPY services/api/ ./
-RUN pip install .
 
 EXPOSE 8000
 

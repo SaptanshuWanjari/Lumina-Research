@@ -40,6 +40,16 @@ export function SecurityPanel({ settings }: SecurityPanelProps) {
               </dd>
             </div>
             <div className="flex items-center justify-between gap-3">
+              <dt>Embeddings key</dt>
+              <dd className="font-semibold text-slate-900">
+                {settings.reuseApiKeyForEmbeddings
+                  ? "Reuses main key"
+                  : settings.hasStoredEmbeddingsApiKey
+                    ? `Present (••••${settings.embeddingsApiKeyLastFour ?? ""})`
+                    : "Not stored"}
+              </dd>
+            </div>
+            <div className="flex items-center justify-between gap-3">
               <dt>Last updated</dt>
               <dd className="font-semibold text-slate-900">
                 {settings.updatedAt

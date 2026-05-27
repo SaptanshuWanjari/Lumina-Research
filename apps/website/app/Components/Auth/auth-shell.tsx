@@ -23,11 +23,24 @@ export default async function AuthShell({
   variant,
   searchParams,
 }: AuthShellProps & {
-  searchParams?: Promise<{ error?: string | string[] }>;
+  searchParams?: Promise<{
+    error?: string | string[];
+    redirectTo?: string | string[];
+  }>;
 }) {
   const isLogin = variant === "login";
   const params = searchParams ? await searchParams : undefined;
   const error = Array.isArray(params?.error) ? params?.error[0] : params?.error;
+  const redirectTo = Array.isArray(params?.redirectTo)
+    ? params?.redirectTo[0]
+    : params?.redirectTo;
+  const oauthLink = (provider: "google" | "github") => {
+    const query = new URLSearchParams({ provider });
+    if (redirectTo) {
+      query.set("redirectTo", redirectTo);
+    }
+    return `/auth/oauth?${query.toString()}`;
+  };
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#fafbfc]">
@@ -81,7 +94,7 @@ export default async function AuthShell({
                     variant="outline"
                     className="h-11 cursor-pointer rounded-lg border-slate-200 bg-white text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                   >
-                    <Link href="/auth/oauth?provider=google">
+                    <Link href={oauthLink("google")}>
                       <BsGoogle size={18} />
                       Google
                     </Link>
@@ -92,7 +105,7 @@ export default async function AuthShell({
                     variant="outline"
                     className="h-11 cursor-pointer rounded-lg border-slate-200 bg-white text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                   >
-                    <Link href="/auth/oauth?provider=github">
+                    <Link href={oauthLink("github")}>
                       <BsGithub size={18} />
                       GitHub
                     </Link>
@@ -112,6 +125,9 @@ export default async function AuthShell({
                   action={isLogin ? "/auth/login" : "/auth/signup"}
                   method="post"
                 >
+                  {redirectTo ? (
+                    <input type="hidden" name="redirectTo" value={redirectTo} />
+                  ) : null}
                   {!isLogin && (
                     <div>
                       <Label
