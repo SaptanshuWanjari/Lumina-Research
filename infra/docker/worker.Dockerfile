@@ -4,11 +4,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
 
-WORKDIR /app
+WORKDIR /services/worker
 
 RUN pip install --upgrade pip
 
-COPY services/worker/ /app/
+COPY services/worker/ ./
 RUN pip install .
 
 CMD ["python", "main.py"]

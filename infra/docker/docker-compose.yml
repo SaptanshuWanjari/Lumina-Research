@@ -17,6 +17,8 @@ services:
       context: ../..
       dockerfile: infra/docker/api.Dockerfile
     restart: unless-stopped
+    env_file:
+      - ../../services/api/.env
     depends_on:
       redis:
         condition: service_healthy
@@ -49,6 +51,8 @@ services:
       context: ../..
       dockerfile: infra/docker/worker.Dockerfile
     restart: unless-stopped
+    env_file:
+      - ../../services/worker/.env
     depends_on:
       redis:
         condition: service_healthy
@@ -71,6 +75,8 @@ services:
       context: ../..
       dockerfile: infra/docker/orchestrator.Dockerfile
     restart: unless-stopped
+    env_file:
+      - ../../services/orchestrator/.env
     depends_on:
       redis:
         condition: service_healthy
@@ -101,6 +107,8 @@ services:
       context: ../..
       dockerfile: infra/docker/web.Dockerfile
     restart: unless-stopped
+    env_file:
+      - ../../apps/website/.env
     depends_on:
       api:
         condition: service_healthy

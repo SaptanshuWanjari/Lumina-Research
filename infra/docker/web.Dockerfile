@@ -1,34 +1,34 @@
 FROM node:22-alpine AS deps
 
-WORKDIR /app
+WORKDIR /apps/website
 
 COPY apps/website/package.json apps/website/package-lock.json ./
 RUN npm ci
 
 FROM node:22-alpine AS build
 
-WORKDIR /app
+WORKDIR /apps/website
 
 ENV NODE_ENV=production
 
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /apps/website/node_modules ./node_modules
 COPY apps/website/ ./
 RUN npm run build
 
 FROM node:22-alpine AS runtime
 
-WORKDIR /app
+WORKDIR /apps/website
 
 ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0
 
-COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/package-lock.json ./package-lock.json
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/.next ./.next
-COPY --from=build /app/public ./public
-COPY --from=build /app/app ./app
+COPY --from=build /apps/website/package.json ./package.json
+COPY --from=build /apps/website/package-lock.json ./package-lock.json
+COPY --from=build /apps/website/node_modules ./node_modules
+COPY --from=build /apps/website/.next ./.next
+COPY --from=build /apps/website/public ./public
+COPY --from=build /apps/website/app ./app
 
 EXPOSE 3000
 

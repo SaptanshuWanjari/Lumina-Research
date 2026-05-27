@@ -9,6 +9,9 @@ export type AiSettingsSummary = {
   model: string;
   hasStoredApiKey: boolean;
   apiKeyLastFour: string | null;
+  hasStoredEmbeddingsApiKey: boolean;
+  embeddingsApiKeyLastFour: string | null;
+  reuseApiKeyForEmbeddings: boolean;
   updatedAt: string | null;
 };
 
@@ -22,6 +25,9 @@ type AiSettingsRow = {
   model: string | null;
   encrypted_api_key: string | null;
   api_key_last_four: string | null;
+  encrypted_embeddings_api_key: string | null;
+  embeddings_api_key_last_four: string | null;
+  reuse_api_key_for_embeddings: boolean | null;
   updated_at: string | null;
 };
 
@@ -44,6 +50,9 @@ function rowToSummary(row: AiSettingsRow | null): AiSettingsSummary {
     model,
     hasStoredApiKey: Boolean(row?.encrypted_api_key),
     apiKeyLastFour: row?.api_key_last_four ?? null,
+    hasStoredEmbeddingsApiKey: Boolean(row?.encrypted_embeddings_api_key),
+    embeddingsApiKeyLastFour: row?.embeddings_api_key_last_four ?? null,
+    reuseApiKeyForEmbeddings: row?.reuse_api_key_for_embeddings ?? true,
     updatedAt: row?.updated_at ?? null,
   };
 }
@@ -52,7 +61,9 @@ export async function getAiSettingsSummary() {
   const { supabase, user } = await requireUserContext();
   const { data, error } = await supabase
     .from("ai_settings")
-    .select("provider,model,encrypted_api_key,api_key_last_four,updated_at")
+    .select(
+      "provider,model,encrypted_api_key,api_key_last_four,encrypted_embeddings_api_key,embeddings_api_key_last_four,reuse_api_key_for_embeddings,updated_at",
+    )
     .eq("owner_user_id", user.id)
     .maybeSingle();
 
@@ -70,11 +81,16 @@ export async function updateAiSettings(input: {
   model: string;
   apiKey?: string;
   clearApiKey?: boolean;
+  embeddingsApiKey?: string;
+  clearEmbeddingsApiKey?: boolean;
+  reuseApiKeyForEmbeddings?: boolean;
 }) {
   const { supabase, user } = await requireUserContext();
   const existingResp = await supabase
     .from("ai_settings")
-    .select("encrypted_api_key")
+    .select(
+      "encrypted_api_key,encrypted_embeddings_api_key,reuse_api_key_for_embeddings",
+    )
     .eq("owner_user_id", user.id)
     .maybeSingle();
 
@@ -88,7 +104,7 @@ export async function updateAiSettings(input: {
   }
 
   const now = new Date().toISOString();
-  const payload: Record<string, string | null> = {
+  const payload: Record<string, string | boolean | null> = {
     owner_user_id: user.id,
     provider: input.provider,
     model: input.model,
@@ -107,6 +123,24 @@ export async function updateAiSettings(input: {
     payload.api_key_last_four = null;
   }
 
+  if (typeof input.reuseApiKeyForEmbeddings === "boolean") {
+    payload.reuse_api_key_for_embeddings = input.reuseApiKeyForEmbeddings;
+  } else if (!existingResp.data) {
+    payload.reuse_api_key_for_embeddings = true;
+  }
+
+  if (input.clearEmbeddingsApiKey) {
+    payload.encrypted_embeddings_api_key = null;
+    payload.embeddings_api_key_last_four = null;
+  } else if (typeof input.embeddingsApiKey === "string" && input.embeddingsApiKey.trim()) {
+    const trimmedEmbeddingsKey = input.embeddingsApiKey.trim();
+    payload.encrypted_embeddings_api_key = encryptSecret(trimmedEmbeddingsKey);
+    payload.embeddings_api_key_last_four = trimmedEmbeddingsKey.slice(-4);
+  } else if (!existingResp.data) {
+    payload.encrypted_embeddings_api_key = null;
+    payload.embeddings_api_key_last_four = null;
+  }
+
   const { error } = await supabase.from("ai_settings").upsert(payload, {
     onConflict: "owner_user_id",
   });
@@ -121,7 +155,9 @@ export async function updateAiSettings(input: {
 
   const { data, error: fetchError } = await supabase
     .from("ai_settings")
-    .select("provider,model,encrypted_api_key,api_key_last_four,updated_at")
+    .select(
+      "provider,model,encrypted_api_key,api_key_last_four,encrypted_embeddings_api_key,embeddings_api_key_last_four,reuse_api_key_for_embeddings,updated_at",
+    )
     .eq("owner_user_id", user.id)
     .maybeSingle();
   if (fetchError) {

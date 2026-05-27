@@ -9,7 +9,18 @@ export const AI_PROVIDER_CATALOG = {
       "gemini-2.5-flash-lite",
       "gemini-2.5-flash",
       "gemini-2.5-pro",
+      "gemini-2.0-flash",
+      "gemini-1.5-pro",
+      "gemini-1.5-flash",
     ],
+  },
+  groq: {
+    label: "Groq",
+    requiresApiKey: true,
+    apiKeyLabel: "Groq API Key",
+    apiKeyPlaceholder: "gsk_...",
+    description: "Groq-hosted models optimized for fast inference.",
+    models: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "gemma2-9b-it"],
   },
   ollama: {
     label: "Ollama",

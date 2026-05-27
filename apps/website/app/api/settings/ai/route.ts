@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import {
+  AI_PROVIDER_CATALOG,
   defaultModelForProvider,
   isAiProvider,
   isValidProviderModel,
@@ -38,25 +39,68 @@ export async function PUT(request: NextRequest) {
         ? body.apiKey.trim()
         : undefined;
     const clearApiKey = body.clearApiKey === true;
+    const embeddingsApiKey =
+      typeof body.embeddingsApiKey === "string" && body.embeddingsApiKey.trim()
+        ? body.embeddingsApiKey.trim()
+        : undefined;
+    const clearEmbeddingsApiKey = body.clearEmbeddingsApiKey === true;
+    const reuseApiKeyForEmbeddings =
+      typeof body.reuseApiKeyForEmbeddings === "boolean"
+        ? body.reuseApiKeyForEmbeddings
+        : undefined;
 
-    if (provider === "gemini" && !apiKey && !clearApiKey) {
-      const current = await getAiSettingsSummary();
-      if (!current.hasStoredApiKey) {
-        return NextResponse.json(
-          { detail: "Gemini requires an API key before saving." },
-          { status: 400 },
-        );
-      }
-    }
+    const current = await getAiSettingsSummary();
+    const requiresProviderKey = AI_PROVIDER_CATALOG[provider].requiresApiKey;
+    const nextReuse =
+      typeof reuseApiKeyForEmbeddings === "boolean"
+        ? reuseApiKeyForEmbeddings
+        : current.reuseApiKeyForEmbeddings;
+    const hasProviderKey = Boolean(apiKey) || current.hasStoredApiKey;
+    const hasEmbeddingsKey = Boolean(embeddingsApiKey) || current.hasStoredEmbeddingsApiKey;
 
-    if (provider === "gemini" && clearApiKey) {
+    if (requiresProviderKey && !apiKey && !clearApiKey && !current.hasStoredApiKey) {
       return NextResponse.json(
-        { detail: "Gemini requires an API key. Save a replacement key instead." },
+        { detail: `${AI_PROVIDER_CATALOG[provider].label} requires an API key.` },
         { status: 400 },
       );
     }
 
-    const settings = await updateAiSettings({ provider, model, apiKey, clearApiKey });
+    if (requiresProviderKey && clearApiKey) {
+      return NextResponse.json(
+        { detail: `${AI_PROVIDER_CATALOG[provider].label} requires an API key.` },
+        { status: 400 },
+      );
+    }
+
+    if (nextReuse) {
+      if (provider !== "gemini") {
+        return NextResponse.json(
+          { detail: "Embeddings key reuse is only supported with Gemini." },
+          { status: 400 },
+        );
+      }
+      if (!hasProviderKey) {
+        return NextResponse.json(
+          { detail: "Embeddings require a stored Gemini API key." },
+          { status: 400 },
+        );
+      }
+    } else if (!hasEmbeddingsKey) {
+      return NextResponse.json(
+        { detail: "Embeddings require a stored API key." },
+        { status: 400 },
+      );
+    }
+
+    const settings = await updateAiSettings({
+      provider,
+      model,
+      apiKey,
+      clearApiKey,
+      embeddingsApiKey,
+      clearEmbeddingsApiKey,
+      reuseApiKeyForEmbeddings: nextReuse,
+    });
     return NextResponse.json(settings);
   } catch (error) {
     const detail =

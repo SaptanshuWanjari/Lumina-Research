@@ -1,6 +1,17 @@
 -- WARNING: This schema is for context only and is not meant to be run.
 -- Table order and constraints may not be valid for execution.
 
+CREATE TABLE public.ai_settings (
+  owner_user_id uuid NOT NULL,
+  provider text NOT NULL CHECK (provider = ANY (ARRAY['gemini'::text, 'ollama'::text])),
+  model text NOT NULL,
+  encrypted_api_key text,
+  api_key_last_four text,
+  created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT ai_settings_pkey PRIMARY KEY (owner_user_id),
+  CONSTRAINT ai_settings_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.profiles(user_id)
+);
 CREATE TABLE public.audit_logs (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   owner_user_id uuid NOT NULL,
@@ -268,6 +279,7 @@ CREATE TABLE public.runs (
   created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp with time zone NOT NULL,
   approved_at timestamp with time zone,
+  run_config jsonb NOT NULL DEFAULT '{}'::jsonb,
   CONSTRAINT runs_pkey PRIMARY KEY (id),
   CONSTRAINT runs_case_id_fkey FOREIGN KEY (case_id) REFERENCES public.cases(id),
   CONSTRAINT runs_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.profiles(user_id),

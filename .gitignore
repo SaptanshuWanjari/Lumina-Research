@@ -139,5 +139,7 @@ services/**/build/
 *.bak
 *.orig
 .vercel
-dump.rdb
+*.rdb
 .antigravitycli
+docs/
+PRD.md
