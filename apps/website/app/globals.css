@@ -130,3 +130,15 @@
     @apply font-sans;
   }
 }
+
+.exporting-report [data-export-ignore] {
+  display: none !important;
+}
+
+.exporting-report [data-export-aside] {
+  display: none !important;
+}
+
+.exporting-report [data-export-grid] {
+  grid-template-columns: minmax(0, 1fr) !important;
+}

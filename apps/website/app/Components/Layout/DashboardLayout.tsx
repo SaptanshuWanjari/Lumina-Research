@@ -12,7 +12,12 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    if (typeof document === "undefined") return true;
+    const match = document.cookie.match(/(?:^|;\s*)sidebar_state=([^;]+)/);
+    if (!match) return true;
+    return match[1] === "true";
+  });
 
   return (
     <AppRealtimeProvider>

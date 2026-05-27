@@ -5,7 +5,7 @@ import DashboardLayout from "../../../Components/Layout/DashboardLayout";
 import { MarkdownRenderer } from "@/app/Components/Report/MarkdownRenderer";
 import { ApproveRunButton } from "@/app/Components/Runs/ApproveRunButton";
 import { RetryButton } from "@/app/Components/Runs/RetryButton";
-import { RunLiveStatus } from "@/app/Components/Runs/RunLiveStatus";
+import { RunRealtimeRefresher } from "@/app/Components/Runs/RunRealtimeRefresher";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getRunDetail } from "@/lib/server/data";
@@ -513,6 +513,7 @@ export default async function RunPage(props: PageProps<"/runs/[runId]">) {
 
   return (
     <DashboardLayout>
+      <RunRealtimeRefresher runId={detail.run.id} />
       <section className="min-h-screen bg-slate-50 p-6">
         <div className="space-y-6">
           <header className="rounded-[13px] bg-white p-6 shadow-sm ring-1 ring-black/5">
@@ -535,11 +536,6 @@ export default async function RunPage(props: PageProps<"/runs/[runId]">) {
                 <p className="mt-3 text-slate-600">
                   Current step: {detail.run.currentStep ?? "unknown"}
                 </p>
-                <RunLiveStatus
-                  runId={detail.run.id}
-                  initialStatus={detail.run.status}
-                  initialCurrentStep={detail.run.currentStep}
-                />
               </div>
               <div className="flex flex-col items-start gap-2 lg:items-end">
                 {detail.run.needsReview ? <ApproveRunButton runId={detail.run.id} /> : null}

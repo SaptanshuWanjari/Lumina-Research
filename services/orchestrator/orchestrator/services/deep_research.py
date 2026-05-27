@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import json
 import re
 from typing import Any
@@ -101,7 +102,10 @@ def _extract_json(text: str) -> dict[str, Any]:
     try:
         parsed = json.loads(match.group(0))
     except json.JSONDecodeError:
-        return {}
+        try:
+            parsed = ast.literal_eval(match.group(0))
+        except (ValueError, SyntaxError):
+            return {}
     return parsed if isinstance(parsed, dict) else {}
 
 

@@ -57,3 +57,14 @@ export function truncateText(value: string, max = 140) {
   if (value.length <= max) return value;
   return `${value.slice(0, max - 1)}...`;
 }
+
+export function slugifyFilename(value: string, fallback = "report") {
+  const cleaned = value
+    .trim()
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return cleaned.length > 0 ? cleaned : fallback;
+}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { appRoutes } from "@/lib/app-routes";
+import { LogoIcon } from '../Common/LogoIcon';
 
 const NavBar = () => {
   const links = [
@@ -10,24 +11,17 @@ const NavBar = () => {
   ];
   return (
     <nav className="sticky top-0 z-50 w-full px-6 py-4">
-      <div
-        className="max-w-7xl mx-auto flex items-center justify-between px-6 py-3 rounded-full bg-white ethereal-blur border border-white/40 shadow-sm"
-      >
-        <Link className="flex items-center gap-2 group" href={appRoutes.dashboard}>
-          <div
-            className="p-2 rounded-lg bg-surface-container-low border border-surface-variant/20 transition-all duration-300 group-hover:scale-105"
-         >
-            <span
-              className="material-symbols-outlined text-primary text-xl leading-none block"
-              data-icon="psychology"
-            ></span
-            >
-          </div>
-          <span
-            className="text-sm font-extrabold tracking-tight text-inverse-surface"
-          >Lumina Research</span
-          >
-        </Link>
+      <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-3 rounded-full bg-white ethereal-blur border border-white/40 shadow-sm">
+        <Link
+          className="flex items-center gap-3 group"
+          href={appRoutes.dashboard}
+        >
+          <LogoIcon className="w-9 h-9 text-black shrink-0" />
+
+          <span className="text-[15px] font-black tracking-tight text-inverse-surface">
+            Lumina Research
+          </span>
+        </Link>{" "}
         <div className="hidden md:flex items-center gap-8">
           {links.map((link) => (
             <Link
@@ -38,7 +32,6 @@ const NavBar = () => {
               {link.name}
             </Link>
           ))}
-
         </div>
         <Link
           href={appRoutes.cases}
@@ -48,7 +41,6 @@ const NavBar = () => {
         </Link>
       </div>
     </nav>
-
   );
 };
 

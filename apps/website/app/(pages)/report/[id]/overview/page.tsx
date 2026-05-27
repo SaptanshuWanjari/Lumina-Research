@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import DashboardLayout from "../../../../Components/Layout/DashboardLayout";
 import { MarkdownRenderer } from "@/app/Components/Report/MarkdownRenderer";
+import { ReportExportActions } from "@/app/Components/Report/ReportExportActions";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getReportDetail } from "@/lib/server/data";
@@ -24,18 +25,28 @@ export default async function ReportOverviewPage(
   return (
     <DashboardLayout>
       <section className="min-h-screen bg-slate-50 p-6">
-        <div className="space-y-6">
+        <div className="space-y-6" id="report-export-content">
           <header className="rounded-[13px] bg-white p-6 shadow-sm ring-1 ring-black/5">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge className={STATUS_CLASS[detail.report.status] ?? "bg-slate-100 text-slate-700"}>
-                {detail.report.status}
-              </Badge>
-              <Link
-                href={`/cases/${detail.caseItem.id}/details`}
-                className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600 hover:bg-slate-200"
-              >
-                {detail.caseItem.title}
-              </Link>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge
+                  className={STATUS_CLASS[detail.report.status] ?? "bg-slate-100 text-slate-700"}
+                >
+                  {detail.report.status}
+                </Badge>
+                <Link
+                  href={`/cases/${detail.caseItem.id}/details`}
+                  className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600 hover:bg-slate-200"
+                >
+                  {detail.caseItem.title}
+                </Link>
+              </div>
+              <ReportExportActions
+                caseTitle={detail.caseItem.title}
+                reportTitle={detail.report.title ?? `Report v${detail.report.versionNumber}`}
+                contentMarkdown={detail.report.contentMarkdown}
+                summary={detail.report.summary}
+              />
             </div>
             <h1 className="mt-3 text-4xl font-semibold text-slate-900">
               {detail.report.title ?? `Report v${detail.report.versionNumber}`}
@@ -75,7 +86,7 @@ export default async function ReportOverviewPage(
             </div>
           </header>
 
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]" data-export-grid>
             <section className="rounded-[13px] bg-white p-5 shadow-sm ring-1 ring-black/5">
               <h2 className="text-lg font-semibold text-slate-800">Content</h2>
               <article className="mt-4 rounded-[13px] bg-slate-50 p-5">
@@ -89,7 +100,7 @@ export default async function ReportOverviewPage(
               </article>
             </section>
 
-            <aside className="xl:sticky xl:top-6 xl:self-start">
+            <aside className="xl:sticky xl:top-6 xl:self-start" data-export-aside>
               <details className="rounded-[13px] bg-white p-4 shadow-sm ring-1 ring-black/5" open>
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
                   <div>
