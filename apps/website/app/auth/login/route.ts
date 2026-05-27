@@ -5,11 +5,6 @@ import { resolveRedirectPath } from "@/lib/server/redirects";
 import { getRouteHandlerSupabaseClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
-  const supabase = await getRouteHandlerSupabaseClient();
-  if (!supabase) {
-    return NextResponse.redirect(new URL(appRoutes.login, request.url));
-  }
-
   const formData = await request.formData();
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
@@ -20,14 +15,18 @@ export async function POST(request: NextRequest) {
     appRoutes.dashboard,
   );
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  const redirectTo = new URL(
-    error ? appRoutes.login : redirectPath,
-    request.url,
-  );
-  if (error) {
-    redirectTo.searchParams.set("error", error.message);
-    redirectTo.searchParams.set("redirectTo", redirectPath);
+  const successResponse = NextResponse.redirect(new URL(redirectPath, request.url));
+  const supabase = await getRouteHandlerSupabaseClient(request, successResponse);
+  if (!supabase) {
+    return NextResponse.redirect(new URL(appRoutes.login, request.url));
   }
-  return NextResponse.redirect(redirectTo);
+
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) {
+    const errorRedirect = new URL(appRoutes.login, request.url);
+    errorRedirect.searchParams.set("error", error.message);
+    errorRedirect.searchParams.set("redirectTo", redirectPath);
+    return NextResponse.redirect(errorRedirect);
+  }
+  return successResponse;
 }

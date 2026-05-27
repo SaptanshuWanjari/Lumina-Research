@@ -10,9 +10,10 @@ export async function GET(request: NextRequest) {
     request.nextUrl.searchParams.get("redirectTo"),
     appRoutes.dashboard,
   );
+  const response = NextResponse.redirect(new URL(redirectPath, request.url));
   if (code) {
-    const supabase = await getRouteHandlerSupabaseClient();
+    const supabase = await getRouteHandlerSupabaseClient(request, response);
     await supabase?.auth.exchangeCodeForSession(code);
   }
-  return NextResponse.redirect(new URL(redirectPath, request.url));
+  return response;
 }

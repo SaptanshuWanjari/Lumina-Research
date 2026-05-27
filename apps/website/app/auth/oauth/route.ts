@@ -14,14 +14,14 @@ export async function GET(request: NextRequest) {
     request.nextUrl.searchParams.get("redirectTo"),
     appRoutes.dashboard,
   );
+  const callbackUrl = new URL("/auth/callback", request.url);
+  callbackUrl.searchParams.set("redirectTo", redirectPath);
 
-  const supabase = await getRouteHandlerSupabaseClient();
+  const response = NextResponse.next();
+  const supabase = await getRouteHandlerSupabaseClient(request, response);
   if (!supabase) {
     return NextResponse.redirect(new URL(appRoutes.login, request.url));
   }
-
-  const callbackUrl = new URL("/auth/callback", request.url);
-  callbackUrl.searchParams.set("redirectTo", redirectPath);
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,

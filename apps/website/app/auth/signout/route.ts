@@ -4,7 +4,8 @@ import { appRoutes } from "@/lib/app-routes";
 import { getRouteHandlerSupabaseClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
-  const supabase = await getRouteHandlerSupabaseClient();
+  const response = NextResponse.redirect(new URL(appRoutes.login, request.url));
+  const supabase = await getRouteHandlerSupabaseClient(request, response);
   await supabase?.auth.signOut();
-  return NextResponse.redirect(new URL(appRoutes.login, request.url));
+  return response;
 }

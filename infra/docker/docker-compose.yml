@@ -16,6 +16,8 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/api.Dockerfile
+      extra_hosts:
+        - "files.pythonhosted.org:167.82.56.223"
     restart: unless-stopped
     env_file:
       - ../../services/api/.env
@@ -24,6 +26,11 @@ services:
         condition: service_healthy
     ports:
       - "8000:8000"
+    volumes:
+      - ../../services/api:/services/api
+      - /services/api/.venv
+      - /services/api/__pycache__
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     environment:
       API_HOST: 0.0.0.0
       API_PORT: 8000
@@ -50,12 +57,20 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/worker.Dockerfile
+      extra_hosts:
+        - "files.pythonhosted.org:167.82.56.223"
     restart: unless-stopped
     env_file:
       - ../../services/worker/.env
     depends_on:
       redis:
         condition: service_healthy
+    volumes:
+      - ../../services/worker:/services/worker
+      - /services/worker/.venv
+      - /services/worker/__pycache__
+    command: >
+      sh -c "while true; do python main.py & PID=$$!; inotifywait -r -e modify -e create -e delete --exclude '(__pycache__|\.pyc|\.pyo|\.git)' /services/worker; kill $$PID 2>/dev/null; wait $$PID 2>/dev/null; done"
     environment:
       CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
       CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/1}
@@ -74,12 +89,23 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/orchestrator.Dockerfile
+      extra_hosts:
+        - "files.pythonhosted.org:167.82.56.223"
     restart: unless-stopped
     env_file:
       - ../../services/orchestrator/.env
     depends_on:
       redis:
         condition: service_healthy
+    volumes:
+      - ../../services/orchestrator:/services/orchestrator
+      - /services/orchestrator/.venv
+      - /services/orchestrator/__pycache__
+    command: >
+      sh -c "while true; do
+      celery -A orchestrator.core.celery_app.celery_app worker --loglevel=INFO --queues=orchestrator & PID=$$!;
+      inotifywait -r -e modify -e create -e delete --exclude '(__pycache__|\.pyc|\.pyo|\.git)' /services/orchestrator;
+      kill $$PID 2>/dev/null; wait $$PID 2>/dev/null; done"
     environment:
       CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
       CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/1}
@@ -117,8 +143,13 @@ services:
         condition: service_healthy
     ports:
       - "3000:3000"
+    volumes:
+      - ../../apps/website:/apps/website
+      - /apps/website/node_modules
+      - /apps/website/.next
+    command: npm run dev
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
       PORT: 3000
       SITE_URL: ${SITE_URL:-http://localhost:3000}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}

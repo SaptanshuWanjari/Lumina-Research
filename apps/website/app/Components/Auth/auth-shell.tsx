@@ -94,10 +94,10 @@ export default async function AuthShell({
                     variant="outline"
                     className="h-11 cursor-pointer rounded-lg border-slate-200 bg-white text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                   >
-                    <Link href={oauthLink("google")}>
+                    <a href={oauthLink("google")}>
                       <BsGoogle size={18} />
                       Google
-                    </Link>
+                    </a>
                   </Button>
                   <Button
                     type="button"
@@ -105,10 +105,10 @@ export default async function AuthShell({
                     variant="outline"
                     className="h-11 cursor-pointer rounded-lg border-slate-200 bg-white text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                   >
-                    <Link href={oauthLink("github")}>
+                    <a href={oauthLink("github")}>
                       <BsGithub size={18} />
                       GitHub
-                    </Link>
+                    </a>
                   </Button>
                 </div>
 
