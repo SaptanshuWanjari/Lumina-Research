@@ -14,9 +14,12 @@ export async function GET(request: NextRequest) {
     request.nextUrl.searchParams.get("redirectTo"),
     appRoutes.dashboard,
   );
+  
+  // Do not append query parameters to the callback URL. Supabase/Providers often reject redirect URIs 
+  // with dynamic query strings, causing a fallback to the default Site URL.
   const callbackUrl = new URL("/auth/callback", request.url);
-  callbackUrl.searchParams.set("redirectTo", redirectPath);
 
+  // Initialize a response object so Supabase can set cookies (like the PKCE code_verifier)
   const response = NextResponse.next();
   const supabase = await getRouteHandlerSupabaseClient(request, response);
   if (!supabase) {
@@ -39,5 +42,27 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(redirectTo);
   }
 
-  return NextResponse.redirect(data.url);
+  // Create the actual redirect response
+  const redirectResponse = NextResponse.redirect(data.url);
+  
+  // Store the intended redirect path in a cookie instead of the URL query string
+  redirectResponse.cookies.set("oauth_redirect", redirectPath, { 
+    path: "/", 
+    maxAge: 3600, 
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production"
+  });
+  
+  // CRITICAL: We must copy the cookies (PKCE code-verifier) from the initial response 
+  // over to the new redirect response, including all options!
+  response.cookies.getAll().forEach((cookie) => {
+    redirectResponse.cookies.set({
+      name: cookie.name,
+      value: cookie.value,
+      ...cookie
+    });
+  });
+
+  return redirectResponse;
 }

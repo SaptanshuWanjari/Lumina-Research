@@ -25,21 +25,18 @@ const dropdownButtons = [
   {
     label: "Local Profile",
     icon: UserCircle2,
-    onClick: (router: ReturnType<typeof useRouter>) => router.push(appRoutes.settings),
-  },
-  {
-    label: "Preferences",
-    icon: Settings,
     onClick: (router: ReturnType<typeof useRouter>) =>
-      router.push(`${appRoutes.settings}?section=security`),
+      router.push(appRoutes.settings),
   },
 ];
+
 export default function AvatarMenu() {
   const router = useRouter();
   const [me, setMe] = useState<MeSummary | null>(null);
 
   useEffect(() => {
     let mounted = true;
+
     void fetch("/api/me")
       .then((response) => (response.ok ? response.json() : null))
       .then((payload: MeSummary | null) => {
@@ -47,6 +44,7 @@ export default function AvatarMenu() {
           setMe(payload);
         }
       });
+
     return () => {
       mounted = false;
     };
@@ -64,6 +62,7 @@ export default function AvatarMenu() {
           </Avatar>
         </button>
       </DropdownMenuTrigger>
+
       <DropdownMenuContent
         align="end"
         sideOffset={10}
@@ -74,37 +73,73 @@ export default function AvatarMenu() {
             <p className="text-sm font-semibold tracking-tight text-slate-900">
               {me?.displayName ?? "Analyst"}
             </p>
+
             <p className="text-xs text-slate-500">
               {me?.email ?? "Authenticated session"}
             </p>
           </div>
         </DropdownMenuLabel>
+
         <DropdownMenuSeparator className="mx-2 my-1 bg-slate-200" />
+
         {dropdownButtons.map((button) => {
           const Icon = button.icon;
+
           return (
             <DropdownMenuItem
               key={button.label}
-              className="mx-1 rounded-2xl px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-slate-100 focus:text-slate-900"
               onClick={() => button.onClick(router)}
+              className="
+                mx-1 rounded-2xl px-3 py-2.5
+                text-sm font-medium
+                transition-colors
+
+                hover:bg-slate-100
+                focus:bg-slate-100!
+                data-highlighted:bg-slate-100!
+
+                **:text-slate-700
+                hover:**:text-slate-900!
+                focus:**:text-slate-900!
+                data-highlighted:**:text-slate-900!
+              "
             >
-              <Icon className="size-4 text-slate-600" />
-              {button.label}
+              <Icon className="size-4" />
+              <span>{button.label}</span>
             </DropdownMenuItem>
           );
         })}
+
         <DropdownMenuSeparator className="mx-2 my-1 bg-slate-200" />
+
         <DropdownMenuItem
           asChild
-          className="mx-1 rounded-2xl px-0 py-0 text-sm font-medium text-slate-700 focus:bg-slate-100 focus:text-slate-900"
+          className="
+            mx-1 rounded-2xl px-0 py-0
+            text-sm font-medium
+            transition-colors
+
+            hover:bg-slate-100
+            focus:bg-slate-100!
+            data-highlighted:bg-slate-100!
+
+            **:text-slate-700
+            hover:**:text-slate-900!
+            focus:**:text-slate-900!
+            data-highlighted:**:text-slate-900!
+          "
         >
           <form action="/auth/signout" method="post" className="w-full">
             <button
               type="submit"
-              className="flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-left"
+              className="
+                flex w-full items-center gap-2.5
+                rounded-2xl px-3 py-2.5 text-left
+                transition-colors
+              "
             >
-              <LogOut className="size-4 text-slate-600" />
-              Sign out
+              <LogOut className="size-4" />
+              <span>Sign out</span>
             </button>
           </form>
         </DropdownMenuItem>

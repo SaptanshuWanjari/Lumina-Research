@@ -24,7 +24,11 @@ interface CreateCaseButtonProps {
   showIcon?: boolean;
 }
 
-export function CreateCaseButton({ className, variant = "default", showIcon = false }: CreateCaseButtonProps) {
+export function CreateCaseButton({
+  className,
+  variant = "default",
+  showIcon = false,
+}: CreateCaseButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -58,7 +62,7 @@ export function CreateCaseButton({ className, variant = "default", showIcon = fa
         if (payload.detail) {
           detail = payload.detail;
         }
-      } catch {}
+      } catch { }
       setError(detail);
       return;
     }
@@ -82,42 +86,51 @@ export function CreateCaseButton({ className, variant = "default", showIcon = fa
           New Case
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-180">
         <DialogHeader>
           <DialogTitle>Create New Case</DialogTitle>
           <DialogDescription>
-            Start a new research investigation. You can attach sources and run analysis later.
+            Start a new research investigation. You can attach sources and run
+            analysis later.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="title">Case Title</Label>
-            <Input
-              id="title"
-              placeholder="e.g. Q4 Market Analysis"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
+        <div className="grid gap-5 py-4">
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="title">Case Title</Label>
+
+              <Input
+                id="title"
+                placeholder="e.g. Q4 Market Analysis"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="project">Primary Tag (Optional)</Label>
+
+              <Input
+                id="project"
+                placeholder="e.g. equities"
+                value={tag}
+                onChange={(e) => setTag(e.target.value)}
+              />
+            </div>
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="project">Primary Tag (Optional)</Label>
-            <Input
-              id="project"
-              placeholder="e.g. equities"
-              value={tag}
-              onChange={(e) => setTag(e.target.value)}
-            />
-          </div>
+
           <div className="grid gap-2">
             <Label htmlFor="note">Research Question (Optional)</Label>
+
             <Textarea
               id="note"
               placeholder="What decision or analysis should this case answer?"
-              className="resize-none"
+              className="min-h-[120px] resize-none"
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
             />
           </div>
+
           {error ? <p className="text-sm text-rose-600">{error}</p> : null}
         </div>
         <DialogFooter>
