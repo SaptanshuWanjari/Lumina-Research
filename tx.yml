@@ -1,11 +1,6 @@
 session: dev
 
 windows:
-  - name: editor
-    panes:
-      - cwd: .
-        cmd: n .
-
   - name: website
     split: vertical
     panes:
@@ -13,9 +8,22 @@ windows:
         cmd: npm run dev
 
   - name: python
-    split: vertical
+    layout: tiled
+
     panes:
+      - cwd: ./
+        cmd: redis-server
+
       - cwd: ./services/worker
-        cmd: python main.py
+        cmd: uv run python main.py
+
       - cwd: ./services/api
-        cmd: python main.py
+        cmd: uv run python main.py
+
+      - cwd: ./services/orchestrator
+        cmd: >
+          uv run celery
+          -A orchestrator.core.celery_app.celery_app
+          worker
+          --loglevel=INFO
+          --queues=orchestrator

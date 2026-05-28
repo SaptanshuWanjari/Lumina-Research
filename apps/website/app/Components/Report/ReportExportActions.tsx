@@ -1,8 +1,5 @@
 "use client";
 
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
-
 import { Button } from "@/components/ui/button";
 import { slugifyFilename } from "@/lib/utils";
 
@@ -43,37 +40,64 @@ export function ReportExportActions({
       return;
     }
 
-    document.body.classList.add("exporting-report");
-    try {
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-        ignoreElements: (el) => el.hasAttribute("data-export-ignore"),
-      });
-      const imgData = canvas.toDataURL("image/png");
+    const clonedContent = element.cloneNode(true) as HTMLElement;
+    clonedContent.querySelectorAll("[data-export-ignore]").forEach((node) => {
+      node.remove();
+    });
 
-      const pdf = new jsPDF("p", "pt", "a4");
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+    const iframe = document.createElement("iframe");
+    iframe.title = "report-export";
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    iframe.style.visibility = "hidden";
+    document.body.appendChild(iframe);
 
-      let heightLeft = imgHeight;
-      let position = 0;
+    const printWindow = iframe.contentWindow;
+    const printDocument = iframe.contentDocument;
+    if (!printWindow || !printDocument) {
+      iframe.remove();
+      alert("Export failed: print frame unavailable.");
+      return;
+    }
 
-      pdf.addImage(imgData, "PNG", 0, position, pdfWidth, imgHeight);
-      heightLeft -= pdfHeight;
+    const headNodes = Array.from(
+      document.querySelectorAll('style, link[rel="stylesheet"]'),
+    ).map((node) => node.cloneNode(true));
 
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, pdfWidth, imgHeight);
-        heightLeft -= pdfHeight;
-      }
+    printDocument.open();
+    printDocument.write(
+      `<!doctype html><html><head><title>${filenameBase}</title></head><body></body></html>`,
+    );
+    printDocument.close();
 
-      pdf.save(`${filenameBase}.pdf`);
-    } finally {
-      document.body.classList.remove("exporting-report");
+    for (const node of headNodes) {
+      printDocument.head.appendChild(node);
+    }
+
+    const printStyles = printDocument.createElement("style");
+    printStyles.textContent = `
+      @page { size: A4; margin: 24mm; }
+      body { background: #ffffff; color: #0f172a; }
+      [data-export-ignore] { display: none !important; }
+      .exporting-report { background: #ffffff !important; }
+    `;
+    printDocument.head.appendChild(printStyles);
+    printDocument.body.appendChild(clonedContent);
+
+    const finalizePrint = () => {
+      printWindow.focus();
+      printWindow.print();
+      iframe.remove();
+    };
+
+    if (printDocument.fonts?.ready) {
+      printDocument.fonts.ready.then(finalizePrint).catch(finalizePrint);
+    } else {
+      setTimeout(finalizePrint, 500);
     }
   };
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, Settings, UserCircle2 } from "lucide-react";
+import { LogOut, UserCircle2 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -23,7 +23,7 @@ type MeSummary = {
 
 const dropdownButtons = [
   {
-    label: "Local Profile",
+    label: "Profile",
     icon: UserCircle2,
     onClick: (router: ReturnType<typeof useRouter>) =>
       router.push(appRoutes.settings),
@@ -33,6 +33,15 @@ const dropdownButtons = [
 export default function AvatarMenu() {
   const router = useRouter();
   const [me, setMe] = useState<MeSummary | null>(null);
+
+  async function handleSignOut() {
+    const response = await fetch("/auth/signout", { method: "POST" });
+    if (!response.ok) {
+      throw new Error("Sign out failed.");
+    }
+    router.replace(appRoutes.login);
+    router.refresh();
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -66,7 +75,7 @@ export default function AvatarMenu() {
       <DropdownMenuContent
         align="end"
         sideOffset={10}
-        className="min-w-[260px] rounded-[20px] border border-slate-200 bg-white p-2 shadow-[0_20px_50px_rgba(15,23,42,0.12)] ring-0 before:hidden"
+        className="min-w-65 rounded-[20px] border border-slate-200 bg-white p-2 shadow-[0_20px_50px_rgba(15,23,42,0.12)] ring-0 before:hidden"
       >
         <DropdownMenuLabel className="px-3 py-3">
           <div className="space-y-1.5">
@@ -113,9 +122,12 @@ export default function AvatarMenu() {
         <DropdownMenuSeparator className="mx-2 my-1 bg-slate-200" />
 
         <DropdownMenuItem
-          asChild
+          onSelect={(event) => {
+            event.preventDefault();
+            void handleSignOut();
+          }}
           className="
-            mx-1 rounded-2xl px-0 py-0
+            mx-1 rounded-2xl px-3 py-2.5
             text-sm font-medium
             transition-colors
 
@@ -129,19 +141,8 @@ export default function AvatarMenu() {
             data-highlighted:**:text-slate-900!
           "
         >
-          <form action="/auth/signout" method="post" className="w-full">
-            <button
-              type="submit"
-              className="
-                flex w-full items-center gap-2.5
-                rounded-2xl px-3 py-2.5 text-left
-                transition-colors
-              "
-            >
-              <LogOut className="size-4" />
-              <span>Sign out</span>
-            </button>
-          </form>
+          <LogOut className="size-4" />
+          <span>Sign out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

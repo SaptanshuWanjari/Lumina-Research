@@ -60,18 +60,18 @@ const Footer = () => {
               </h3>
 
               <div className="space-y-3 text-zinc-500">
-                <Link
-                  href="/integrations"
-                  className="block hover:text-zinc-900 transition-colors"
-                >
-                  Integrations
-                </Link>
+                {/* <Link */}
+                {/*   href="/integrations" */}
+                {/*   className="block hover:text-zinc-900 transition-colors" */}
+                {/* > */}
+                {/*   Integrations */}
+                {/* </Link> */}
 
                 <Link
                   href="https://github.com/SaptanshuWanjari/Lumina-Research"
-                  className="block hover:text-zinc-900 transition-colors"
+                  className="underline block hover:text-zinc-900 transition-colors"
                 >
-                  Documentation
+                  GitHub
                 </Link>
 
                 <Link

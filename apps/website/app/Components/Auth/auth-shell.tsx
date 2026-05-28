@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { appRoutes } from "@/lib/app-routes";
+import { LogoIcon } from "../Common/LogoIcon";
 
 type AuthVariant = "login" | "signup";
 
@@ -47,23 +47,13 @@ export default async function AuthShell({
       <div className="relative mx-auto w-full">
         <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/90 backdrop-blur">
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-            <Link href="/" className="text-xl font-semibold text-slate-900">
+            <Link
+              href="/"
+              className="text-xl font-semibold text-slate-900 items-cenitems-center gap-2"
+            >
+              <LogoIcon className="inline size-6 text-slate-900" />
               Lumina Research
             </Link>
-            <div className="flex items-center gap-2">
-              <Link
-                href={isLogin ? "/signup" : "/login"}
-                className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-              >
-                {isLogin ? "Create Account" : "Sign In"}
-              </Link>
-              <Link
-                href={appRoutes.dashboard}
-                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-              >
-                Open App
-              </Link>
-            </div>
           </div>
         </header>
 
@@ -153,11 +143,11 @@ export default async function AuthShell({
                     >
                       Email
                     </Label>
-                      <Input
-                        id="work-email"
-                        name="email"
-                        type="email"
-                        placeholder="name@gmail.com"
+                    <Input
+                      id="work-email"
+                      name="email"
+                      type="email"
+                      placeholder="name@gmail.com"
                       className="mt-1.5 h-11 rounded-lg border-slate-200 bg-slate-50 px-4 text-slate-900 placeholder:text-slate-400 focus-visible:border-slate-400 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
                     />
                   </div>
@@ -169,11 +159,11 @@ export default async function AuthShell({
                     >
                       Password
                     </Label>
-                      <Input
-                        id="password"
-                        name="password"
-                        type="password"
-                        placeholder="Enter password"
+                    <Input
+                      id="password"
+                      name="password"
+                      type="password"
+                      placeholder="Enter password"
                       className="mt-1.5 h-11 rounded-lg border-slate-200 bg-slate-50 px-4 text-slate-900 placeholder:text-slate-400 focus-visible:border-slate-400 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
                     />
                   </div>
@@ -221,37 +211,39 @@ export default async function AuthShell({
               </CardFooter>
             </Card>
           </div>
+          <div className="relative mx-auto hidden w-full max-w-155 lg:block">
+            <div className="relative overflow-hidden rounded-[20px] border border-zinc-800 bg-black px-10 py-8 text-white shadow-2xl">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),transparent_55%)]" />
+              {/* Main */}
+              <div className="relative z-10 mt-10">
+                <h2 className="max-w-lg text-4xl font-semibold leading-[1.05] tracking-tight text-white">
+                  Research across documents, APIs, and workflows.
+                </h2>
 
-          <div className="relative mx-auto hidden w-full max-w-145 lg:block">
-            <div className="relative rounded-[13px] border border-slate-800 bg-slate-900 p-10 text-white shadow-xl">
-              <div className="mx-auto mt-8 flex size-20 items-center justify-center rounded-full border border-white/20 bg-white/5 text-2xl font-semibold">
-                ⦿
+                <p className="mt-5 max-w-md text-sm leading-7 text-zinc-400">
+                  Connect PDFs, websites, embeddings, and automation pipelines
+                  to generate structured AI research with citations and
+                  retrieval.
+                </p>
               </div>
 
-              <p className="mt-10 text-center text-xs font-semibold tracking-widest text-slate-400">
-                Analyst Insight
-              </p>
-              <h2 className="mt-4 text-balance text-center text-5xl font-semibold leading-tight tracking-tight">
-                Augmenting the future of financial research.
-              </h2>
-              <p className="mx-auto mt-6 max-w-md text-center text-base leading-relaxed text-slate-300">
-                Decode market sentiment and quantitative data with intelligence
-                in real-time.
-              </p>
+              {/* Features */}
+              <div className="relative z-10 mt-8 grid grid-cols-2 gap-3">
+                {[
+                  "Semantic Search",
+                  "PDF Analysis",
+                  "Agentic Research",
+                  "n8n Automation",
+                ].map((item) => (
+                  <div
+                    key={item}
+                    className="rounded-xl border border-white/10 bg-white/3 px-4 py-3 text-sm text-zinc-300"
+                  >
+                    {item}
+                  </div>
+                ))}
+              </div>
             </div>
-
-            {/* <div className="absolute -bottom-8 -left-10 w-60 rounded-xl border border-slate-200 bg-white p-5 text-slate-700 shadow-xl">
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
-                <Sparkles className="size-4" />
-                Metric
-              </div>
-              <p className="mt-3 text-xl font-semibold text-slate-900">
-                99.8% Accuracy
-              </p>
-              <div className="mt-3 h-2 rounded-full bg-slate-200">
-                <div className="h-full w-[92%] rounded-full bg-slate-900" />
-              </div>
-            </div> */}
           </div>
         </section>
       </div>
