@@ -143,3 +143,4 @@ services/**/build/
 .antigravitycli
 docs/
 PRD.md
+deployments/

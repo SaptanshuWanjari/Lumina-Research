@@ -1,4 +1,4 @@
-name: lumina-research
+name: lumina-research-prod
 
 services:
   redis:
@@ -26,15 +26,10 @@ services:
         condition: service_healthy
     ports:
       - "8000:8000"
-    volumes:
-      - ../../services/api:/services/api
-      - /services/api/.venv
-      - /services/api/__pycache__
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     environment:
       API_HOST: 0.0.0.0
       API_PORT: 8000
-      BACKEND_CORS_ORIGINS: '["http://localhost:3000","http://website:3000"]'
       CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
       CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/1}
       SUPABASE_URL:
@@ -57,8 +52,6 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/worker.Dockerfile
-      args:
-        DEV: "true"
       extra_hosts:
         - "files.pythonhosted.org:167.82.56.223"
     restart: unless-stopped
@@ -67,12 +60,7 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-    volumes:
-      - ../../services/worker:/services/worker
-      - /services/worker/.venv
-      - /services/worker/__pycache__
-    command: >
-      sh -c "while true; do python main.py & PID=$$!; inotifywait -r -e modify -e create -e delete --exclude '(__pycache__|\.pyc|\.pyo|\.git)' /services/worker; kill $$PID 2>/dev/null; wait $$PID 2>/dev/null; done"
+    command: python main.py
     environment:
       CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
       CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/1}
@@ -91,8 +79,6 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/orchestrator.Dockerfile
-      args:
-        DEV: "true"
       extra_hosts:
         - "files.pythonhosted.org:167.82.56.223"
     restart: unless-stopped
@@ -101,15 +87,7 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-    volumes:
-      - ../../services/orchestrator:/services/orchestrator
-      - /services/orchestrator/.venv
-      - /services/orchestrator/__pycache__
-    command: >
-      sh -c "while true; do
-      celery -A orchestrator.core.celery_app.celery_app worker --loglevel=INFO --queues=orchestrator & PID=$$!;
-      inotifywait -r -e modify -e create -e delete --exclude '(__pycache__|\.pyc|\.pyo|\.git)' /services/orchestrator;
-      kill $$PID 2>/dev/null; wait $$PID 2>/dev/null; done"
+    command: celery -A orchestrator.core.celery_app.celery_app worker --loglevel=INFO --queues=orchestrator
     environment:
       CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
       CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/1}
@@ -131,45 +109,3 @@ services:
       LANGSMITH_ENDPOINT: ${LANGSMITH_ENDPOINT:-https://api.smith.langchain.com}
     extra_hosts:
       - "host.docker.internal:host-gateway"
-
-  website:
-    build:
-      context: ../..
-      dockerfile: infra/docker/web.Dockerfile
-    restart: unless-stopped
-    dns:
-      - 1.1.1.1
-      - 8.8.8.8
-    env_file:
-      - ../../apps/website/.env
-    depends_on:
-      api:
-        condition: service_healthy
-    ports:
-      - "3000:3000"
-    volumes:
-      - ../../apps/website:/apps/website
-      - /apps/website/node_modules
-      - /apps/website/.next
-    command: npm run dev
-    environment:
-      NODE_ENV: development
-      PORT: 3000
-      SITE_URL: ${SITE_URL:-http://localhost:3000}
-      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
-      SERVICES_API_BASE_URL: ${SERVICES_API_BASE_URL:-http://api:8000}
-      NEXT_PUBLIC_SUPABASE_URL:
-      NEXT_PUBLIC_SUPABASE_ANON_KEY:
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY:
-      AI_SETTINGS_ENCRYPTION_KEY:
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "fetch('http://127.0.0.1:3000/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
-        ]
-      interval: 15s
-      timeout: 5s
-      retries: 5

@@ -1,0 +1,57 @@
+# Cloud Run optimized Dockerfile for API
+# Key optimizations:
+# - Minimal base image (python:3.13-slim = 123MB)
+# - Multi-stage build (only prod dependencies in final image)
+# - Cloud Run uses port 8080 by default
+# - Startup probe ready for Cloud Run health checks
+# - Cache layers for faster rebuilds
+
+FROM python:3.13-slim AS base
+
+# Copy UV directly from official image
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_CONCURRENT_DOWNLOADS=1
+
+WORKDIR /services/api
+
+# ============= Build Stage =============
+FROM base AS builder
+
+# Copy dependency files
+COPY services/api/pyproject.toml services/api/uv.lock ./
+
+# Install Python dependencies with retry logic
+RUN for i in 1 2 3 4 5; do \
+      uv sync --frozen --no-install-project --no-dev && s=0 && break || s=$?; \
+      echo "uv sync failed, retrying in 5 seconds..."; sleep 5; \
+    done; exit $s
+
+# ============= Production Stage =============
+FROM base AS runtime
+
+# Set Cloud Run specific env vars
+ENV PORT=8080 \
+    API_HOST=0.0.0.0 \
+    API_PORT=8080
+
+# Copy only what's needed from builder
+COPY --from=builder /services/api/.venv /services/api/.venv
+
+# Copy application code
+COPY services/api/ ./
+
+ENV PATH="/services/api/.venv/bin:$PATH"
+
+# Health check for Cloud Run
+HEALTHCHECK --interval=15s --timeout=5s --retries=5 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health')" || exit 1
+
+EXPOSE 8080
+
+# Run uvicorn with optimal settings for Cloud Run
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "4"]
