@@ -27,6 +27,14 @@ class DeepResearchResponse(BaseModel):
         if isinstance(data, dict):
             for field in ["draft_report", "analysis_notes", "critique_notes"]:
                 val = data.get(field)
+                if isinstance(val, str) and val.strip().startswith("{") and val.strip().endswith("}"):
+                    try:
+                        val = ast.literal_eval(val.strip())
+                    except Exception:
+                        try:
+                            val = json.loads(val.strip())
+                        except Exception:
+                            pass
                 if isinstance(val, dict):
                     md = []
                     for k, v in val.items():
@@ -173,19 +181,16 @@ def _expand_short_report(
             f"Evidence JSON:\n{evidence}"
         ),
     )
-    return DeepResearchResponse(
-        research_plan=response.research_plan,
-        analysis_notes=str(result.get("analysis_notes") or response.analysis_notes),
-        critique_notes=str(result.get("critique_notes") or response.critique_notes),
-        draft_report=str(result.get("draft_report") or response.draft_report),
-        citation_map=result.get("citation_map") or response.citation_map,
-        confidence=response.confidence,
-        open_questions=[
-            str(item)
-            for item in (result.get("open_questions") or response.open_questions)
-            if str(item).strip()
-        ],
-    )
+    merged = {
+        "research_plan": response.research_plan,
+        "analysis_notes": result.get("analysis_notes") or response.analysis_notes,
+        "critique_notes": result.get("critique_notes") or response.critique_notes,
+        "draft_report": result.get("draft_report") or response.draft_report,
+        "citation_map": result.get("citation_map") or response.citation_map,
+        "confidence": response.confidence,
+        "open_questions": result.get("open_questions") or response.open_questions,
+    }
+    return DeepResearchResponse.model_validate(merged)
 
 
 def _prompt(config: dict[str, Any]) -> str:
