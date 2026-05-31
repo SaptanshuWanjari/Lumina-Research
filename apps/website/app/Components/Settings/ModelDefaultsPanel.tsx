@@ -100,7 +100,7 @@ export default function ModelDefaultsPanel({
       <div>
         <h2 className="text-3xl font-semibold text-slate-900">AI Configuration</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Pick the provider and model for future planner, analyzer, and writer runs.
+          Pick the provider and model for future planner, analyzer and writer runs.
         </p>
       </div>
 

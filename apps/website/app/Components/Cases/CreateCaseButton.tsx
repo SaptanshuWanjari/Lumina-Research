@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -24,11 +25,11 @@ interface CreateCaseButtonProps {
   showIcon?: boolean;
 }
 
-export function CreateCaseButton({
-  className,
-  variant = "default",
-  showIcon = false,
-}: CreateCaseButtonProps) {
+interface CreateCaseDialogProps {
+  trigger: ReactNode;
+}
+
+export function CreateCaseDialog({ trigger }: CreateCaseDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -81,10 +82,7 @@ export function CreateCaseButton({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant={variant} className={className}>
-          {showIcon && <Plus className="mr-2 size-4" />}
-          New Case
-        </Button>
+        {trigger}
       </DialogTrigger>
       <DialogContent className="sm:max-w-180">
         <DialogHeader>
@@ -143,5 +141,22 @@ export function CreateCaseButton({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+export function CreateCaseButton({
+  className,
+  variant = "default",
+  showIcon = false,
+}: CreateCaseButtonProps) {
+  return (
+    <CreateCaseDialog
+      trigger={
+        <Button variant={variant} className={className}>
+          {showIcon && <Plus className="mr-2 size-4" />}
+          New Case
+        </Button>
+      }
+    />
   );
 }

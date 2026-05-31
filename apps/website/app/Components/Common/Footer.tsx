@@ -88,11 +88,11 @@ const Footer = () => {
         {/* Bottom */}
         <div className="mt-14 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-zinc-200/60 pt-6">
           <p className="text-sm text-zinc-400 flex items-center gap-1">
-            <Copyright size={19}/> 2026 Lumina Research. All rights reserved.
+            <Copyright size={19} /> 2026 Lumina Research. All rights reserved.
           </p>
 
           <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">
-            Agentic Research Infrastructure
+            Agentic Research Platform
           </p>
         </div>
       </div>

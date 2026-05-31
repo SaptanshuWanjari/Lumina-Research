@@ -18,9 +18,14 @@ const FAQ = () => {
         "Yes, you can easily integrate your own API key to access the language models of your choice, giving you full control over your research environment.",
     },
     {
-      question: "Can I export reports to PDF or Word?",
+      question:"Is my data tracked?",
       answer:
-        "Yes, you can easily export your research reports in both PDF and Word formats for seamless sharing and collaboration.",
+        "No, we do not track your data. Your research and interactions within the workspace are private and secure, ensuring that your information remains confidential.",
+    },
+    {
+      question: "Can I export reports to PDF or .md?",
+      answer:
+        "Yes, you can easily export your research reports in both PDF and markdown formats for seamless sharing and collaboration.",
     },
     {
       question: "What is the citation accuracy rate?",

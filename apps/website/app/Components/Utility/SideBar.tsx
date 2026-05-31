@@ -14,6 +14,7 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
+import { CreateCaseDialog } from "@/app/Components/Cases/CreateCaseButton";
 import { isActivePath, quickActions, sidebarNavItems } from "@/lib/app-routes";
 
 const SideBar = () => {
@@ -68,6 +69,24 @@ const SideBar = () => {
           <SidebarGroupContent>
             <SidebarMenu>
               {quickActions.map((item) => {
+                if (item.label === "New Analysis") {
+                  return (
+                    <SidebarMenuItem key={item.label}>
+                      <CreateCaseDialog
+                        trigger={
+                          <SidebarMenuButton
+                            tooltip={item.label}
+                            variant="outline"
+                          >
+                            <item.icon className="size-4" />
+                            <span>{item.label}</span>
+                          </SidebarMenuButton>
+                        }
+                      />
+                    </SidebarMenuItem>
+                  );
+                }
+
                 return (
                   <SidebarMenuItem key={item.label}>
                     <SidebarMenuButton asChild tooltip={item.label} variant="outline">

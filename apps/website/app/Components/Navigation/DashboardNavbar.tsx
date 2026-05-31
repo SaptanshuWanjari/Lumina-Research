@@ -1,7 +1,6 @@
 "use client"
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { Settings } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -9,12 +8,10 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import AppSearchInput from "../Common/AppSearchInput";
 import AvatarMenu from "../Common/AvatarMenu";
 import NotificationsButton from "../Common/NotificationsButton";
-import { appRoutes, isActivePath, topNavItems } from "@/lib/app-routes";
+import { appRoutes } from "@/lib/app-routes";
 // import { LogoIcon } from './LogoIcon';
 
 const DashboardNavbar = () => {
-  const pathname = usePathname();
-
   return (
     <div className="flex min-h-16 flex-wrap items-center gap-3 px-4 py-2 lg:h-16 lg:flex-nowrap lg:px-6">
       <div className="flex w-full items-center gap-3 lg:w-auto lg:min-w-0 lg:flex-1">
@@ -66,21 +63,7 @@ const DashboardNavbar = () => {
         </div>
       </div>
 
-      <nav className="-mx-1 flex w-full items-center gap-2 overflow-x-auto px-1 pb-1 lg:hidden">
-        {topNavItems.map((item) => (
-          <Link
-            key={item.label}
-            href={item.href}
-            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold tracking-wide transition-colors ${
-              isActivePath(pathname, item)
-                ? "bg-slate-900 text-white"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
-            }`}
-          >
-            {item.label}
-          </Link>
-        ))}
-      </nav>
+      <nav className="hidden" aria-hidden="true" />
     </div>
   );
 };

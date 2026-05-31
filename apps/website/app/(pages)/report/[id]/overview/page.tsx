@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import DashboardLayout from "../../../../Components/Layout/DashboardLayout";
+import DashboardLayout from "@/app/Components/Layout/DashboardLayout";
 import { MarkdownRenderer } from "@/app/Components/Report/MarkdownRenderer";
 import { ReportExportActions } from "@/app/Components/Report/ReportExportActions";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getReportDetail } from "@/lib/server/data";
 import { formatDateTime } from "@/lib/utils";
 
@@ -86,7 +85,7 @@ export default async function ReportOverviewPage(
             </div>
           </header>
 
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]" data-export-grid>
+          <div className="" data-export-grid>
             <section className="rounded-[13px] bg-white p-5 shadow-sm ring-1 ring-black/5">
               <h2 className="text-lg font-semibold text-slate-800">Content</h2>
               <article className="mt-4 rounded-[13px] bg-slate-50 p-5">
@@ -100,80 +99,6 @@ export default async function ReportOverviewPage(
               </article>
             </section>
 
-            <aside className="xl:sticky xl:top-6 xl:self-start" data-export-aside>
-              <details className="rounded-[13px] bg-white p-4 shadow-sm ring-1 ring-black/5" open>
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
-                  <div>
-                    <h2 className="text-base font-semibold text-slate-800">Evidence Panel</h2>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Claims and citations
-                    </p>
-                  </div>
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
-                    {detail.claims.length + detail.citations.length} items
-                  </span>
-                </summary>
-
-                <Tabs defaultValue="claims" className="mt-4">
-                  <TabsList className="grid w-full grid-cols-2 rounded-2xl bg-slate-100 p-1">
-                    <TabsTrigger value="claims">Claims</TabsTrigger>
-                    <TabsTrigger value="citations">Citations</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="claims" className="mt-4">
-                    <div className="space-y-3">
-                      {detail.claims.length === 0 ? (
-                        <div className="rounded-[13px] border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500">
-                          No structured claims were stored for this report version.
-                        </div>
-                      ) : (
-                        detail.claims.map((claim) => (
-                          <article
-                            key={claim.id}
-                            className="rounded-[13px] border border-slate-200 bg-slate-50 px-4 py-3"
-                          >
-                            <p className="font-semibold text-slate-900">
-                              Claim {claim.claimIndex}
-                            </p>
-                            <p className="mt-2 text-sm text-slate-600">{claim.claimText}</p>
-                            <p className="mt-2 text-xs text-slate-500">
-                              Section: {claim.section ?? "n/a"} • Support score: {claim.supportScore ?? "n/a"}
-                            </p>
-                          </article>
-                        ))
-                      )}
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="citations" className="mt-4">
-                    <div className="space-y-3">
-                      {detail.citations.length === 0 ? (
-                        <div className="rounded-[13px] border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500">
-                          No citations stored yet.
-                        </div>
-                      ) : (
-                        detail.citations.map((citation) => (
-                          <article
-                            key={citation.id}
-                            className="rounded-[13px] border border-slate-200 bg-slate-50 px-4 py-3"
-                          >
-                            <p className="font-semibold text-slate-900">
-                              {citation.citationLabel ?? citation.sourceTitle}
-                            </p>
-                            <p className="mt-2 text-sm text-slate-600">
-                              {citation.excerpt ?? "No excerpt stored."}
-                            </p>
-                            <p className="mt-2 text-xs text-slate-500">
-                              Source: {citation.sourceTitle} • Confidence: {citation.confidence ?? "n/a"}
-                            </p>
-                          </article>
-                        ))
-                      )}
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </details>
-            </aside>
           </div>
         </div>
       </section>

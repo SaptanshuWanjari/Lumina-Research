@@ -41,9 +41,6 @@ export default async function CasesPage(props: {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h1 className="text-4xl font-semibold text-slate-900">Cases</h1>
-                <p className="mt-2 text-slate-600">
-                  Real case list from Supabase cloud. Runs and reports link from each case.
-                </p>
               </div>
               <CreateCaseButton className="rounded-full px-6" showIcon={true} />
             </div>
@@ -52,7 +49,7 @@ export default async function CasesPage(props: {
                 name="q"
                 defaultValue={query}
                 placeholder="Search cases"
-                className="h-10 min-w-[280px] rounded-full border border-slate-200 bg-slate-50 px-4 text-sm"
+                className="h-10 min-w-70 rounded-full border border-slate-200 bg-slate-50 px-4 text-sm"
               />
               <select
                 name="status"
