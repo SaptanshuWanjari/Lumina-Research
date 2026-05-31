@@ -13,7 +13,7 @@ from app.schemas.notifications import Notification
 router = APIRouter()
 
 
-@router.get("/", response_model=List[Notification])
+@router.get("", response_model=List[Notification])
 def read_notifications(
     current_user: TokenPayload = Depends(get_current_user),
     supabase: Client = Depends(get_supabase),

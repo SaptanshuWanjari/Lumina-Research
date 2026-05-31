@@ -25,7 +25,6 @@ export async function GET(request: NextRequest) {
   
   const response = NextResponse.redirect(new URL(redirectPath, request.url));
   
-  // Clear the cookie now that we've used it
   response.cookies.delete("oauth_redirect");
   
   if (code) {

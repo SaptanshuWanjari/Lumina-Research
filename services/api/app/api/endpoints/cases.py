@@ -20,7 +20,7 @@ from app.schemas.cases import Case, CaseCreate, CaseUpdate
 router = APIRouter()
 
 
-@router.post("/", response_model=Case, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=Case, status_code=status.HTTP_201_CREATED)
 def create_case(
     case_in: CaseCreate,
     current_user: TokenPayload = Depends(get_current_user),
@@ -43,7 +43,7 @@ def create_case(
         raise HTTPException(status_code=500, detail=f"Failed to create case: {exc}")
 
 
-@router.get("/", response_model=List[Case])
+@router.get("", response_model=List[Case])
 def read_cases(
     current_user: TokenPayload = Depends(get_current_user),
     supabase: Client = Depends(get_supabase),

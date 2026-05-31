@@ -40,14 +40,21 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     const body = await request.json();
-    const created = await servicesApiFetch(`/cases/${caseId}/sources`, accessToken!, {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
+    const created = await servicesApiFetch(
+      `/cases/${caseId}/sources`,
+      accessToken!,
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+    );
     return NextResponse.json(created, { status: 201 });
   } catch (error) {
     if (error instanceof ServicesApiError) {
-      return NextResponse.json({ detail: error.message }, { status: error.status });
+      return NextResponse.json(
+        { detail: error.message },
+        { status: error.status },
+      );
     }
 
     return NextResponse.json(

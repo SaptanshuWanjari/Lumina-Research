@@ -28,7 +28,9 @@ export async function POST(request: NextRequest) {
         ? body.priority
         : "normal",
     tags: Array.isArray(body.tags)
-      ? body.tags.filter((item: unknown): item is string => typeof item === "string")
+      ? body.tags.filter(
+          (item: unknown): item is string => typeof item === "string",
+        )
       : [],
   };
 

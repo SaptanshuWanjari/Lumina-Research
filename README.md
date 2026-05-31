@@ -18,8 +18,17 @@ Lumina Research is a workspace for running research cases, evaluating evidence, 
 - Python and UV
 - Redis
 
-### Getting Started
+## Getting Started
 
+### Using Docker
+
+```bash
+docker compose -f infra/docker/docker-compose.yml up --build
+```
+
+Ensure you have the necessary environment variables set up in `infra/env/` based on the provided `.example` files.
+
+### Manual
 1. Frontend
 
    ```bash
@@ -57,10 +66,4 @@ Lumina Research is a workspace for running research cases, evaluating evidence, 
    uv run celery -A orchestrator.core.celery_app.celery_app worker --loglevel=INFO --queues=orchestrator
    ```
 
-### Using Docker
 
-```bash
-docker compose -f infra/docker/docker-compose.yml up --build
-```
-
-Ensure you have the necessary environment variables set up in `infra/env/` based on the provided `.example` files.
