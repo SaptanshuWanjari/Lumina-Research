@@ -18,7 +18,8 @@ RUN if [ "$DEV" = "true" ]; then \
     fi
 
 COPY services/worker/pyproject.toml services/worker/uv.lock ./
-RUN for i in 1 2 3 4 5; do \
+RUN --mount=type=cache,target=/root/.cache/uv \
+    for i in 1 2 3 4 5; do \
       uv sync --frozen --no-install-project --no-dev && s=0 && break || s=$?; \
       echo "uv sync failed, retrying in 5 seconds..."; sleep 5; \
     done; exit $s
@@ -26,11 +27,11 @@ RUN for i in 1 2 3 4 5; do \
 ENV PATH="/services/worker/.venv/bin:$PATH"
 
 COPY services/worker/ ./
-RUN for i in 1 2 3 4 5; do \
+RUN --mount=type=cache,target=/root/.cache/uv \
+    for i in 1 2 3 4 5; do \
       uv sync --frozen --no-dev && s=0 && break || s=$?; \
       echo "uv sync failed, retrying in 5 seconds..."; sleep 5; \
     done; \
-    rm -rf /root/.cache/uv; \
     exit $s
 
 EXPOSE 8080

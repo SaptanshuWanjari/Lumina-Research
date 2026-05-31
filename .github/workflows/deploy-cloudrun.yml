@@ -20,6 +20,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      actions: write
 
     steps:
       - name: Checkout code
@@ -52,16 +53,21 @@ jobs:
         run: |
           gcloud auth configure-docker ${{ env.REGISTRY }}
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build and push API image
         if: steps.filter.outputs.api == 'true' || github.event_name == 'workflow_dispatch'
-        run: |
-          docker build \
-            -f infra/docker/api.Dockerfile \
-            -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/lumina-docker/api:${{ github.sha }} \
-            -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/lumina-docker/api:latest \
-            .
-          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/lumina-docker/api:${{ github.sha }}
-          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/lumina-docker/api:latest
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/api.Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/lumina-docker/api:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/lumina-docker/api:latest
+          cache-from: type=gha,scope=${{ github.ref_name }}-api
+          cache-to: type=gha,mode=max,scope=${{ github.ref_name }}-api
 
       - name: Deploy API to Cloud Run
         if: steps.filter.outputs.api == 'true' || github.event_name == 'workflow_dispatch'
@@ -79,14 +85,16 @@ jobs:
 
       - name: Build and push Worker image
         if: steps.filter.outputs.worker == 'true' || github.event_name == 'workflow_dispatch'
-        run: |
-          docker build \
-            -f infra/docker/worker.Dockerfile \
-            -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/lumina-docker/worker:${{ github.sha }} \
-            -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/lumina-docker/worker:latest \
-            .
-          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/lumina-docker/worker:${{ github.sha }}
-          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/lumina-docker/worker:latest
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/worker.Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/lumina-docker/worker:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/lumina-docker/worker:latest
+          cache-from: type=gha,scope=${{ github.ref_name }}-worker
+          cache-to: type=gha,mode=max,scope=${{ github.ref_name }}-worker
 
       - name: Deploy Worker to Cloud Run
         if: steps.filter.outputs.worker == 'true' || github.event_name == 'workflow_dispatch'
@@ -103,14 +111,16 @@ jobs:
 
       - name: Build and push Orchestrator image
         if: steps.filter.outputs.orchestrator == 'true' || github.event_name == 'workflow_dispatch'
-        run: |
-          docker build \
-            -f infra/docker/orchestrator.Dockerfile \
-            -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/lumina-docker/orchestrator:${{ github.sha }} \
-            -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/lumina-docker/orchestrator:latest \
-            .
-          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/lumina-docker/orchestrator:${{ github.sha }}
-          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/lumina-docker/orchestrator:latest
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/orchestrator.Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/lumina-docker/orchestrator:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/lumina-docker/orchestrator:latest
+          cache-from: type=gha,scope=${{ github.ref_name }}-orchestrator
+          cache-to: type=gha,mode=max,scope=${{ github.ref_name }}-orchestrator
 
       - name: Deploy Orchestrator to Cloud Run
         if: steps.filter.outputs.orchestrator == 'true' || github.event_name == 'workflow_dispatch'
@@ -131,3 +141,24 @@ jobs:
           echo "API: $(gcloud run services describe lumina-api --region=${{ env.REGION }} --format='value(status.url)')"
           echo "Worker: $(gcloud run services describe lumina-worker --region=${{ env.REGION }} --format='value(status.url)')"
           echo "Orchestrator: $(gcloud run services describe lumina-orchestrator --region=${{ env.REGION }} --format='value(status.url)')"
+
+      - name: Cleanup old caches
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Cleaning up old caches..."
+          
+          for scope in api worker orchestrator; do
+            # Get cache keys containing the scope name, sorted by creation date (newest first)
+            keys=$(gh cache list -R $GITHUB_REPOSITORY --ref ${{ github.ref }} --json key,createdAt -q 'sort_by(.createdAt) | reverse | .[].key' | grep "$scope" || true)
+            
+            count=0
+            for key in $keys; do
+              count=$((count+1))
+              if [ $count -gt 2 ]; then
+                echo "Deleting cache: $key"
+                gh cache delete "$key" -R $GITHUB_REPOSITORY || true
+              fi
+            done
+          done
