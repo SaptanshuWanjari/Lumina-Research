@@ -94,22 +94,25 @@ class IngestionStore:
         )
         attempt_no = int(rows[0]["attempt_no"]) + 1 if rows else 1
         now = utcnow_iso()
-        return response_one(
-            self.client.table("ingestion_attempts")
-            .insert(
-                {
-                    "source_id": source["id"],
-                    "case_id": source["case_id"],
-                    "owner_user_id": source["owner_user_id"],
-                    "attempt_no": attempt_no,
-                    "status": "running",
-                    "stage": "fetch",
-                    "started_at": now,
-                    "updated_at": now,
-                }
+        return (
+            response_one(
+                self.client.table("ingestion_attempts")
+                .insert(
+                    {
+                        "source_id": source["id"],
+                        "case_id": source["case_id"],
+                        "owner_user_id": source["owner_user_id"],
+                        "attempt_no": attempt_no,
+                        "status": "running",
+                        "stage": "fetch",
+                        "started_at": now,
+                        "updated_at": now,
+                    }
+                )
+                .execute()
             )
-            .execute()
-        ) or {}
+            or {}
+        )
 
     def update_attempt(
         self,
@@ -171,7 +174,9 @@ class IngestionStore:
                     "metadata_json": {
                         "source_id": source["id"],
                         "source_type": source["source_type"],
-                        "content_hash": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+                        "content_hash": hashlib.sha256(
+                            text.encode("utf-8")
+                        ).hexdigest(),
                     },
                     "updated_at": now,
                 }
@@ -332,6 +337,7 @@ def _rewrite_localhost_url(url: str) -> str:
     is local but no rewrite host is configured (e.g. running on Cloud Run).
     """
     import urllib.parse
+
     parsed = urllib.parse.urlparse(url)
     if parsed.hostname not in ("localhost", "127.0.0.1"):
         return url
@@ -339,8 +345,7 @@ def _rewrite_localhost_url(url: str) -> str:
     rewrite_host = settings.N8N_LOCALHOST_REWRITE_HOST.strip()
     if not rewrite_host:
         raise RuntimeError(
-            f"Webhook URL '{url}' points to localhost, which is not reachable from this "
-            "environment. Use a publicly accessible URL (e.g. via ngrok or a deployed n8n instance). "
+            f"Webhook URL '{url}' points to localhost, which is not reachable from this environment. Use a publicly accessible URL (e.g. via ngrok or a deployed n8n instance). "
             "If running locally with Docker Compose, set N8N_LOCALHOST_REWRITE_HOST=host.docker.internal "
             "in the worker environment."
         )
@@ -372,21 +377,14 @@ def _load_source_text(
 
         payload = {"case_id": source.get("case_id"), "source_id": source.get("id")}
         try:
-            # Bypass ngrok interstitial warning page
-            headers = {"ngrok-skip-browser-warning": "true"}
-            resp = httpx.post(url, json=payload, headers=headers, timeout=60.0)
+            resp = httpx.post(url, json=payload, timeout=60.0)
             resp.raise_for_status()
             data = resp.json()
             text = data.get("text") or data.get("content") or data.get("markdown")
             if not text:
-                raise RuntimeError("n8n webhook response missing text, content, or markdown field")
-            
-            # If the response field is a dict or list (like a custom structured JSON response),
-            # serialize it to a JSON string so it can be ingested and chunked correctly.
-            if not isinstance(text, str):
-                import json
-                text = json.dumps(text, ensure_ascii=False, indent=2)
-
+                raise RuntimeError(
+                    "n8n webhook response missing text, content, or markdown field"
+                )
             return normalize_text(text), "n8n", "text/plain"
         except httpx.HTTPError as exc:
             raise RuntimeError(f"n8n webhook request failed: {exc}")
