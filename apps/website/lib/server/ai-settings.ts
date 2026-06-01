@@ -20,6 +20,11 @@ export type StorageLocationSummary = {
   sourceCount: number;
 };
 
+export type AllAiSettingsSummary = {
+  active: AiSettingsSummary;
+  providers: Record<string, AiSettingsSummary>;
+};
+
 type AiSettingsRow = {
   provider: string | null;
   model: string | null;
@@ -65,6 +70,8 @@ export async function getAiSettingsSummary() {
       "provider,model,encrypted_api_key,api_key_last_four,encrypted_embeddings_api_key,embeddings_api_key_last_four,reuse_api_key_for_embeddings,updated_at",
     )
     .eq("owner_user_id", user.id)
+    .order("updated_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (error) {
@@ -74,6 +81,36 @@ export async function getAiSettingsSummary() {
     throw error;
   }
   return rowToSummary((data as AiSettingsRow | null) ?? null);
+}
+
+export async function getAllAiSettings(): Promise<AllAiSettingsSummary> {
+  const { supabase, user } = await requireUserContext();
+  const { data, error } = await supabase
+    .from("ai_settings")
+    .select(
+      "provider,model,encrypted_api_key,api_key_last_four,encrypted_embeddings_api_key,embeddings_api_key_last_four,reuse_api_key_for_embeddings,updated_at",
+    )
+    .eq("owner_user_id", user.id)
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    if (isMissingAiSettingsTableError(error)) {
+      return { active: rowToSummary(null), providers: {} };
+    }
+    throw error;
+  }
+
+  const rows = (data as AiSettingsRow[] | null) ?? [];
+  const providers: Record<string, AiSettingsSummary> = {};
+  for (const row of rows) {
+    if (row.provider) {
+      providers[row.provider] = rowToSummary(row);
+    }
+  }
+
+  const active = rows.length > 0 ? rowToSummary(rows[0]) : rowToSummary(null);
+
+  return { active, providers };
 }
 
 export async function updateAiSettings(input: {
@@ -92,6 +129,7 @@ export async function updateAiSettings(input: {
       "encrypted_api_key,encrypted_embeddings_api_key,reuse_api_key_for_embeddings",
     )
     .eq("owner_user_id", user.id)
+    .eq("provider", input.provider)
     .maybeSingle();
 
   if (existingResp.error) {
@@ -146,7 +184,8 @@ export async function updateAiSettings(input: {
     const { error: updateError } = await supabase
       .from("ai_settings")
       .update(payload)
-      .eq("owner_user_id", user.id);
+      .eq("owner_user_id", user.id)
+      .eq("provider", input.provider);
     error = updateError;
   } else {
     const { error: insertError } = await supabase
@@ -170,6 +209,7 @@ export async function updateAiSettings(input: {
       "provider,model,encrypted_api_key,api_key_last_four,encrypted_embeddings_api_key,embeddings_api_key_last_four,reuse_api_key_for_embeddings,updated_at",
     )
     .eq("owner_user_id", user.id)
+    .eq("provider", input.provider)
     .maybeSingle();
   if (fetchError) {
     if (isMissingAiSettingsTableError(fetchError)) {

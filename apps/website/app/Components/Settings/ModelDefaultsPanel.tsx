@@ -9,7 +9,7 @@ import {
   listModelsForProvider,
   type AiProvider,
 } from "@/lib/ai-provider-catalog";
-import type { AiSettingsSummary } from "@/lib/server/ai-settings";
+import type { AiSettingsSummary, AllAiSettingsSummary } from "@/lib/server/ai-settings";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,21 +22,35 @@ import {
 } from "@/components/ui/select";
 
 type ModelDefaultsPanelProps = {
-  initialSettings: AiSettingsSummary;
+  initialSettings: AllAiSettingsSummary;
 };
 
 export default function ModelDefaultsPanel({
   initialSettings,
 }: ModelDefaultsPanelProps) {
-  const [provider, setProvider] = useState<AiProvider>(initialSettings.provider);
-  const [model, setModel] = useState(initialSettings.model);
+  const [activeSettings, setActiveSettings] = useState(initialSettings.active);
+  const [allProviders, setAllProviders] = useState(initialSettings.providers);
+
+  const [provider, setProvider] = useState<AiProvider>(initialSettings.active.provider);
+
+  const currentProviderSettings = allProviders[provider] ?? {
+    provider,
+    model: defaultModelForProvider(provider),
+    hasStoredApiKey: false,
+    apiKeyLastFour: null,
+    hasStoredEmbeddingsApiKey: false,
+    embeddingsApiKeyLastFour: null,
+    reuseApiKeyForEmbeddings: provider === "gemini",
+    updatedAt: null,
+  };
+
+  const [model, setModel] = useState(currentProviderSettings.model);
   const [apiKey, setApiKey] = useState("");
   const [embeddingsApiKey, setEmbeddingsApiKey] = useState("");
   const [reuseEmbeddingsKey, setReuseEmbeddingsKey] = useState(
-    initialSettings.reuseApiKeyForEmbeddings,
+    currentProviderSettings.reuseApiKeyForEmbeddings,
   );
   const [clearStoredApiKey, setClearStoredApiKey] = useState(false);
-  const [savedSettings, setSavedSettings] = useState(initialSettings);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -66,7 +80,7 @@ export default function ModelDefaultsPanel({
       });
 
       const payload = (await response.json()) as
-        | AiSettingsSummary
+        | AllAiSettingsSummary
         | { detail?: string };
 
       if (!response.ok) {
@@ -77,11 +91,14 @@ export default function ModelDefaultsPanel({
         );
       }
 
-      const nextSettings = payload as AiSettingsSummary;
-      setSavedSettings(nextSettings);
+      const nextAllSettings = payload as AllAiSettingsSummary;
+      setActiveSettings(nextAllSettings.active);
+      setAllProviders(nextAllSettings.providers);
       setApiKey("");
       setEmbeddingsApiKey("");
-      setReuseEmbeddingsKey(nextSettings.reuseApiKeyForEmbeddings);
+      setReuseEmbeddingsKey(
+        nextAllSettings.providers[provider]?.reuseApiKeyForEmbeddings ?? (provider === "gemini"),
+      );
       setClearStoredApiKey(false);
       setMessage("AI settings saved. New runs will use this provider and model.");
     } catch (saveError) {
@@ -128,13 +145,14 @@ export default function ModelDefaultsPanel({
                 onValueChange={(value) => {
                   const nextProvider = value as AiProvider;
                   setProvider(nextProvider);
-                  setModel(defaultModelForProvider(nextProvider));
+                  
+                  const settings = allProviders[nextProvider] ?? {
+                    model: defaultModelForProvider(nextProvider),
+                    reuseApiKeyForEmbeddings: nextProvider === "gemini",
+                  };
+                  setModel(settings.model);
                   setClearStoredApiKey(false);
-                  if (nextProvider !== "gemini") {
-                    setReuseEmbeddingsKey(false);
-                  } else if (provider !== "gemini") {
-                    setReuseEmbeddingsKey(true);
-                  }
+                  setReuseEmbeddingsKey(settings.reuseApiKeyForEmbeddings);
                   setMessage(null);
                   setError(null);
                 }}
@@ -185,9 +203,9 @@ export default function ModelDefaultsPanel({
               <p className="text-sm font-semibold text-slate-800">
                 {providerConfig.apiKeyLabel}
               </p>
-              {savedSettings.hasStoredApiKey ? (
+              {currentProviderSettings.hasStoredApiKey ? (
                 <p className="text-xs text-slate-500">
-                  Stored: ••••{savedSettings.apiKeyLastFour ?? "saved"}
+                  Stored: ••••{currentProviderSettings.apiKeyLastFour ?? "saved"}
                 </p>
               ) : (
                 <p className="text-xs text-slate-500">No key stored</p>
@@ -228,7 +246,7 @@ export default function ModelDefaultsPanel({
                     setMessage(null);
                     setError(null);
                   }}
-                  disabled={!savedSettings.hasStoredApiKey}
+                  disabled={!currentProviderSettings.hasStoredApiKey}
                 />
                 Remove any previously stored remote-provider key.
               </label>
@@ -238,9 +256,9 @@ export default function ModelDefaultsPanel({
           <div className="space-y-3 rounded-[16px] border border-slate-200 bg-white/70 p-4">
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-semibold text-slate-800">Embeddings key</p>
-              {savedSettings.hasStoredEmbeddingsApiKey ? (
+              {currentProviderSettings.hasStoredEmbeddingsApiKey ? (
                 <p className="text-xs text-slate-500">
-                  Stored: ••••{savedSettings.embeddingsApiKeyLastFour ?? "saved"}
+                  Stored: ••••{currentProviderSettings.embeddingsApiKeyLastFour ?? "saved"}
                 </p>
               ) : (
                 <p className="text-xs text-slate-500">No key stored</p>
@@ -310,20 +328,20 @@ export default function ModelDefaultsPanel({
             <div className="rounded-[13px] border border-slate-200 bg-slate-50 p-3">
               <dt className="text-slate-500">Provider</dt>
               <dd className="mt-1 font-semibold text-slate-900">
-                {AI_PROVIDER_CATALOG[savedSettings.provider].label}
+                {AI_PROVIDER_CATALOG[activeSettings.provider].label}
               </dd>
             </div>
             <div className="rounded-[13px] border border-slate-200 bg-slate-50 p-3">
               <dt className="text-slate-500">Model</dt>
               <dd className="mt-1 font-semibold text-slate-900">
-                {savedSettings.model}
+                {activeSettings.model}
               </dd>
             </div>
             <div className="rounded-[13px] border border-slate-200 bg-slate-50 p-3">
               <dt className="text-slate-500">Stored key</dt>
               <dd className="mt-1 font-semibold text-slate-900">
-                {savedSettings.hasStoredApiKey
-                  ? `••••${savedSettings.apiKeyLastFour ?? ""}`
+                {activeSettings.hasStoredApiKey
+                  ? `••••${activeSettings.apiKeyLastFour ?? ""}`
                   : "None"}
               </dd>
             </div>

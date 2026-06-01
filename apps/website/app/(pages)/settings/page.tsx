@@ -1,9 +1,9 @@
 import DashboardLayout from "@/app/Components/Layout/DashboardLayout";
 import ModelDefaultsPanel from "@/app/Components/Settings/ModelDefaultsPanel";
-import { getAiSettingsSummary } from "@/lib/server/ai-settings";
+import { getAllAiSettings } from "@/lib/server/ai-settings";
 
 export default async function SettingsPage() {
-  const aiSettings = await getAiSettingsSummary();
+  const allAiSettings = await getAllAiSettings();
 
   return (
     <DashboardLayout>
@@ -18,7 +18,7 @@ export default async function SettingsPage() {
           <section className="rounded-[13px] bg-white shadow-sm ring-1 ring-black/5">
             <div className="p-5 md:p-7">
 
-              <ModelDefaultsPanel initialSettings={aiSettings} />
+              <ModelDefaultsPanel initialSettings={allAiSettings} />
             </div>
           </section>
         </div>

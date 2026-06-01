@@ -6,11 +6,11 @@ import {
   isAiProvider,
   isValidProviderModel,
 } from "@/lib/ai-provider-catalog";
-import { getAiSettingsSummary, updateAiSettings } from "@/lib/server/ai-settings";
+import { getAllAiSettings, updateAiSettings } from "@/lib/server/ai-settings";
 
 export async function GET() {
   try {
-    const settings = await getAiSettingsSummary();
+    const settings = await getAllAiSettings();
     return NextResponse.json(settings);
   } catch (error) {
     const detail =
@@ -49,8 +49,18 @@ export async function PUT(request: NextRequest) {
         ? body.reuseApiKeyForEmbeddings
         : undefined;
 
-    const current = await getAiSettingsSummary();
-    const requiresProviderKey = AI_PROVIDER_CATALOG[provider].requiresApiKey;
+    const all = await getAllAiSettings();
+    const current = all.providers[provider] ?? {
+      provider,
+      model: defaultModelForProvider(provider),
+      hasStoredApiKey: false,
+      apiKeyLastFour: null,
+      hasStoredEmbeddingsApiKey: false,
+      embeddingsApiKeyLastFour: null,
+      reuseApiKeyForEmbeddings: true,
+      updatedAt: null,
+    };
+    const requiresProviderKey = AI_PROVIDER_CATALOG[provider as keyof typeof AI_PROVIDER_CATALOG].requiresApiKey;
     const nextReuse =
       typeof reuseApiKeyForEmbeddings === "boolean"
         ? reuseApiKeyForEmbeddings
@@ -104,7 +114,8 @@ export async function PUT(request: NextRequest) {
       clearEmbeddingsApiKey,
       reuseApiKeyForEmbeddings: nextReuse,
     });
-    return NextResponse.json(settings);
+    const updatedAll = await getAllAiSettings();
+    return NextResponse.json(updatedAll);
   } catch (error) {
     const detail =
       error instanceof Error ? error.message : "Failed to save AI settings";

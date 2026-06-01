@@ -3,12 +3,15 @@
 
 CREATE TABLE public.ai_settings (
   owner_user_id uuid NOT NULL,
-  provider text NOT NULL CHECK (provider = ANY (ARRAY['gemini'::text, 'ollama'::text])),
+  provider text NOT NULL CHECK (provider = ANY (ARRAY['gemini'::text, 'ollama'::text, 'groq'::text])),
   model text NOT NULL,
   encrypted_api_key text,
   api_key_last_four text,
   created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  encrypted_embeddings_api_key text,
+  embeddings_api_key_last_four text,
+  reuse_api_key_for_embeddings boolean NOT NULL DEFAULT true,
   CONSTRAINT ai_settings_pkey PRIMARY KEY (owner_user_id),
   CONSTRAINT ai_settings_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.profiles(user_id)
 );
@@ -159,6 +162,16 @@ CREATE TABLE public.jobs (
   CONSTRAINT jobs_case_id_fkey FOREIGN KEY (case_id) REFERENCES public.cases(id),
   CONSTRAINT jobs_source_id_fkey FOREIGN KEY (source_id) REFERENCES public.sources(id),
   CONSTRAINT jobs_run_id_fkey FOREIGN KEY (run_id) REFERENCES public.runs(id)
+);
+CREATE TABLE public.notifications (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  owner_user_id uuid NOT NULL,
+  title text NOT NULL,
+  description text,
+  is_read boolean NOT NULL DEFAULT false,
+  created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT notifications_pkey PRIMARY KEY (id),
+  CONSTRAINT notifications_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.profiles(user_id)
 );
 CREATE TABLE public.profiles (
   user_id uuid NOT NULL,
