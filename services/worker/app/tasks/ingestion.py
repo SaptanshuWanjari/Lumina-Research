@@ -340,6 +340,13 @@ def _load_source_text(
         url = source.get("url")
         if not url:
             raise RuntimeError("n8n source missing webhook url")
+        
+        import urllib.parse
+        parsed_url = urllib.parse.urlparse(url)
+        if parsed_url.hostname in ("localhost", "127.0.0.1"):
+            new_netloc = parsed_url.netloc.replace(parsed_url.hostname, "host.docker.internal", 1)
+            url = parsed_url._replace(netloc=new_netloc).geturl()
+
         payload = {"case_id": source.get("case_id"), "source_id": source.get("id")}
         try:
             resp = httpx.post(url, json=payload, timeout=60.0)

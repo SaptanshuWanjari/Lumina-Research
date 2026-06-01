@@ -61,6 +61,7 @@ services:
         DEV: "true"
       extra_hosts:
         - "files.pythonhosted.org:167.82.56.223"
+        - "host.docker.internal:host-gateway"
     restart: unless-stopped
     env_file:
       - ../../services/worker/.env
