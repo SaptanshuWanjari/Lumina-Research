@@ -329,6 +329,16 @@ def _load_source_text(
     store: IngestionStore, source: dict[str, Any]
 ) -> tuple[str, str, str | None]:
     source_type = source.get("source_type")
+    
+    if source_type in ("url", "n8n"):
+        url = source.get("url")
+        if url:
+            import urllib.parse
+            parsed_url = urllib.parse.urlparse(url)
+            if parsed_url.hostname in ("localhost", "127.0.0.1"):
+                new_netloc = parsed_url.netloc.replace(parsed_url.hostname, "host.docker.internal", 1)
+                source["url"] = parsed_url._replace(netloc=new_netloc).geturl()
+
     if source_type == "note":
         return normalize_text(source.get("note_text") or ""), "note", "text/plain"
     if source_type == "url":
@@ -340,12 +350,6 @@ def _load_source_text(
         url = source.get("url")
         if not url:
             raise RuntimeError("n8n source missing webhook url")
-        
-        import urllib.parse
-        parsed_url = urllib.parse.urlparse(url)
-        if parsed_url.hostname in ("localhost", "127.0.0.1"):
-            new_netloc = parsed_url.netloc.replace(parsed_url.hostname, "host.docker.internal", 1)
-            url = parsed_url._replace(netloc=new_netloc).geturl()
 
         payload = {"case_id": source.get("case_id"), "source_id": source.get("id")}
         try:

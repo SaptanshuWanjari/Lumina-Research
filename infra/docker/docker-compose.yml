@@ -61,7 +61,6 @@ services:
         DEV: "true"
       extra_hosts:
         - "files.pythonhosted.org:167.82.56.223"
-        - "host.docker.internal:host-gateway"
     restart: unless-stopped
     env_file:
       - ../../services/worker/.env
@@ -87,6 +86,8 @@ services:
       LANGSMITH_API_KEY:
       LANGSMITH_PROJECT: ${WORKER_LANGSMITH_PROJECT:-lumina-research-worker}
       LANGSMITH_ENDPOINT: ${LANGSMITH_ENDPOINT:-https://api.smith.langchain.com}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   orchestrator:
     build:
