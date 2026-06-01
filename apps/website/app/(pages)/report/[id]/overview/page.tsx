@@ -57,23 +57,11 @@ export default async function ReportOverviewPage(
                 <p className="text-slate-600">No report summary available.</p>
               )}
             </div>
-            <div className="mt-5 grid gap-4 md:grid-cols-4">
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
               <article className="rounded-[13px] bg-slate-50 p-4">
                 <p className="text-xs tracking-[0.16em] text-slate-500">VERSION</p>
                 <p className="mt-2 text-3xl font-semibold text-slate-900">
                   {detail.report.versionNumber}
-                </p>
-              </article>
-              <article className="rounded-[13px] bg-slate-50 p-4">
-                <p className="text-xs tracking-[0.16em] text-slate-500">CLAIMS</p>
-                <p className="mt-2 text-3xl font-semibold text-slate-900">
-                  {detail.claims.length}
-                </p>
-              </article>
-              <article className="rounded-[13px] bg-slate-50 p-4">
-                <p className="text-xs tracking-[0.16em] text-slate-500">CITATIONS</p>
-                <p className="mt-2 text-3xl font-semibold text-slate-900">
-                  {detail.citations.length}
                 </p>
               </article>
               <article className="rounded-[13px] bg-slate-50 p-4">
