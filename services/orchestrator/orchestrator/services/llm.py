@@ -48,7 +48,21 @@ class GeminiService:
         return json.loads(match.group(0))
 
 
-def _repair_write_todos_args(message: Any) -> Any:
+def _repair_groq_tool_args(message: Any) -> Any:
+    """Fix two classes of Groq/Llama tool-call formatting bugs.
+
+    **Bug 1 – bare-array args for write_todos**:
+    Groq's Llama models sometimes call ``write_todos`` with a bare JSON array
+    as arguments instead of the expected ``{"todos": [...]}``.  We wrap it.
+
+    **Bug 2 – JSON embedded in the tool name**:
+    The model occasionally generates a call like
+    ``grep {"pattern": "...", "glob": "**/*.js"}`` where the entire JSON is
+    concatenated into the function name string.  Groq rejects this server-side
+    because the synthesized name doesn't match any declared tool.  We strip
+    these malformed calls so the message is still valid, and the model will
+    self-correct on the next turn.
+    """
     from langchain_core.messages import AIMessage
 
     if not isinstance(message, AIMessage) or not message.tool_calls:
@@ -57,7 +71,17 @@ def _repair_write_todos_args(message: Any) -> Any:
     fixed = []
     changed = False
     for tc in message.tool_calls:
-        if tc.get("name") == "write_todos":
+        name = tc.get("name", "")
+
+        # --- Bug 2: name contains embedded JSON (name includes '{') ---
+        # e.g. name = 'grep {"pattern": "...", "glob": "**/*.js"}'
+        if "{" in name:
+            # Drop the call entirely — it references a hallucinated tool
+            changed = True
+            continue
+
+        # --- Bug 1: write_todos receives a bare array instead of {todos:[]} ---
+        if name == "write_todos":
             args = tc.get("args", {})
             if isinstance(args, list):
                 tc = {**tc, "args": {"todos": args}}
@@ -67,6 +91,7 @@ def _repair_write_todos_args(message: Any) -> Any:
                 if len(values) == 1 and isinstance(values[0], list):
                     tc = {**tc, "args": {"todos": values[0]}}
                     changed = True
+
         fixed.append(tc)
 
     if not changed:
@@ -74,11 +99,46 @@ def _repair_write_todos_args(message: Any) -> Any:
     return message.model_copy(update={"tool_calls": fixed})
 
 
+def _make_tool_error_result(error_msg: str) -> Any:
+    """Build a synthetic ChatResult that reports a tool error back to the model.
+
+    Used when Groq returns a 400 ``tool_use_failed`` response.  By returning a
+    valid ChatResult containing the error as assistant text (no tool calls), the
+    LangGraph agent loop can continue and the model can self-correct.
+    """
+    from langchain_core.messages import AIMessage
+    from langchain_core.outputs import ChatGeneration, ChatResult
+
+    content = (
+        "[TOOL_ERROR] " + error_msg +
+        " — please use only the tools that were explicitly listed in your "
+        "available tools and call them with the correct argument format."
+    )
+    return ChatResult(
+        generations=[
+            ChatGeneration(
+                message=AIMessage(content=content),
+                text=content,
+            )
+        ]
+    )
+
+
 def _make_groq_subclass() -> type:
+    """Dynamically build a ChatGroq subclass that repairs Groq tool-call bugs.
+
+    We build the class lazily so that importing this module doesn't fail if
+    ``langchain_groq`` is not installed.  The returned class is a genuine
+    ``BaseChatModel`` subclass, so ``deepagents.resolve_model``'s
+    ``isinstance(model, BaseChatModel)`` check passes without any tricks.
+    """
     from langchain_groq import ChatGroq
 
     class _ChatGroqFixed(ChatGroq):
+        """ChatGroq that repairs Groq/Llama tool-call formatting bugs."""
+
         def _postprocess(self, result: Any) -> Any:
+            """Repair write_todos bare-array args and drop JSON-in-name tool calls."""
             from langchain_core.messages import AIMessage
             from langchain_core.outputs import ChatGeneration, ChatResult
 
@@ -88,7 +148,7 @@ def _make_groq_subclass() -> type:
                     if isinstance(gen, ChatGeneration) and isinstance(
                         gen.message, AIMessage
                     ):
-                        repaired_msg = _repair_write_todos_args(gen.message)
+                        repaired_msg = _repair_groq_tool_args(gen.message)
                         if repaired_msg is not gen.message:
                             gen = ChatGeneration(
                                 message=repaired_msg,
@@ -102,11 +162,40 @@ def _make_groq_subclass() -> type:
                 )
             return result
 
+        @staticmethod
+        def _is_tool_validation_error(exc: BaseException) -> bool:
+            """Return True if exc is a Groq 400 tool-call validation failure."""
+            try:
+                import groq
+
+                if not isinstance(exc, groq.BadRequestError):
+                    return False
+            except ImportError:
+                pass
+            msg = str(exc)
+            return "tool_use_failed" in msg or "tool call validation failed" in msg
+
+        @staticmethod
+        def _extract_tool_error_detail(exc: BaseException) -> str:
+            """Extract a concise description from the Groq error body."""
+            msg = str(exc)
+            return msg[:400] if len(msg) > 400 else msg
+
         def _generate(self, *args: Any, **kwargs: Any) -> Any:
-            return self._postprocess(super()._generate(*args, **kwargs))
+            try:
+                return self._postprocess(super()._generate(*args, **kwargs))
+            except Exception as exc:
+                if self._is_tool_validation_error(exc):
+                    return _make_tool_error_result(self._extract_tool_error_detail(exc))
+                raise
 
         async def _agenerate(self, *args: Any, **kwargs: Any) -> Any:
-            return self._postprocess(await super()._agenerate(*args, **kwargs))
+            try:
+                return self._postprocess(await super()._agenerate(*args, **kwargs))
+            except Exception as exc:
+                if self._is_tool_validation_error(exc):
+                    return _make_tool_error_result(self._extract_tool_error_detail(exc))
+                raise
 
     return _ChatGroqFixed
 

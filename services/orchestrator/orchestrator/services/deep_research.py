@@ -197,6 +197,12 @@ def _prompt(config: dict[str, Any]) -> str:
     strictness = config["citation_strictness"]
     return f"""You are Lumina's deep research orchestrator.
 
+AVAILABLE TOOLS (you may ONLY call these — do NOT invent or call any other tool):
+- search_case_evidence(query, max_results): search indexed evidence for the current case.
+- write_todos(todos): create or update your task list.
+- task(): delegate focused work to a subagent.
+Do NOT call grep, bash, read_file, write_file, or any other tool. They do not exist here.
+
 Use only the `search_case_evidence` tool for factual evidence. It returns only chunks from the current case and owner.
 
 Workflow:

@@ -65,13 +65,17 @@ def deep_research_node(state: OrchestratorState) -> dict[str, Any]:
             "meta": meta,
         },
     )
+    chunks_without_content = [
+        {k: v for k, v in c.items() if k not in ("content", "citation_label")}
+        for c in chunks
+    ]
     store.write_artifact(
         state["run_id"],
         state["case_id"],
         state["owner_user_id"],
         "retrieval_set",
         "Retrieved evidence",
-        {"chunks": chunks},
+        {"chunks": chunks_without_content},
     )
     store.write_artifact(
         state["run_id"],
@@ -82,7 +86,6 @@ def deep_research_node(state: OrchestratorState) -> dict[str, Any]:
         {
             "content_markdown": result.get("draft_report", ""),
             "summary": str(result.get("analysis_notes", ""))[:2000],
-            "citations": result.get("citation_map", {}),
         },
     )
     return result
@@ -149,13 +152,17 @@ def retriever_node(state: OrchestratorState) -> dict[str, Any]:
         started,
         {"chunk_count": len(records)},
     )
+    chunks_without_content = [
+        {k: v for k, v in c.items() if k not in ("content", "citation_label")}
+        for c in records
+    ]
     store.write_artifact(
         state["run_id"],
         state["case_id"],
         state["owner_user_id"],
         "retrieval_set",
         "Retrieved evidence",
-        {"chunks": records},
+        {"chunks": chunks_without_content},
     )
     return {"retrieved_chunks": records}
 
@@ -228,7 +235,7 @@ def writer_node(state: OrchestratorState) -> dict[str, Any]:
         state["owner_user_id"],
         "draft_report",
         "Draft report",
-        {"content_markdown": draft, "summary": summary, "citations": citation_map},
+        {"content_markdown": draft, "summary": summary},
     )
     return {"draft_report": draft, "citation_map": citation_map}
 
@@ -276,7 +283,7 @@ def human_review_node(state: OrchestratorState) -> dict[str, Any]:
         settings.REPORT_TITLE_PREFIX,
         state.get("analysis_notes", "")[:2000],
         state.get("draft_report", ""),
-        {"citations": state.get("citation_map", {})},
+        {},
     )
     if run_config.get("human_review_enabled") is False:
         store.finish_step(
