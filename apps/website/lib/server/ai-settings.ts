@@ -141,9 +141,20 @@ export async function updateAiSettings(input: {
     payload.embeddings_api_key_last_four = null;
   }
 
-  const { error } = await supabase.from("ai_settings").upsert(payload, {
-    onConflict: "owner_user_id",
-  });
+  let error;
+  if (existingResp.data) {
+    const { error: updateError } = await supabase
+      .from("ai_settings")
+      .update(payload)
+      .eq("owner_user_id", user.id);
+    error = updateError;
+  } else {
+    const { error: insertError } = await supabase
+      .from("ai_settings")
+      .insert(payload);
+    error = insertError;
+  }
+
   if (error) {
     if (isMissingAiSettingsTableError(error)) {
       throw new Error(
