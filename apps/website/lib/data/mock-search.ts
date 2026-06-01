@@ -1,4 +1,4 @@
-import { appRoutes } from "@/lib/mock-app";
+import { appRoutes } from "@/lib/data/mock-app";
 
 export type SearchScope = "sources" | "chunks" | "reports";
 

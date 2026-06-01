@@ -8,7 +8,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import type { CaseDetailRecord } from "@/lib/mock-cases";
+import type { CaseDetailRecord } from "@/lib/data/mock-cases";
 
 interface CaseOverviewPanelProps {
   entry: CaseDetailRecord;

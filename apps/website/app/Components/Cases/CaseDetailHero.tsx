@@ -1,7 +1,7 @@
 import AddSourceDialog from "@/app/Components/Dialogs/AddSourceDialog";
 import RunConfigDialog from "@/app/Components/Dialogs/RunConfigDialog";
 import StatusChip from "@/app/Components/Common/StatusChip";
-import type { CaseDetailRecord } from "@/lib/mock-cases";
+import type { CaseDetailRecord } from "@/lib/data/mock-cases";
 
 interface CaseDetailHeroProps {
   entry: CaseDetailRecord;

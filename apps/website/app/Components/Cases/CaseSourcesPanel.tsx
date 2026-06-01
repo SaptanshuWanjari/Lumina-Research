@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getSourceById, type CaseSourceSummary } from "@/lib/mock-cases";
+import { getSourceById, type CaseSourceSummary } from "@/lib/data/mock-cases";
 
 interface CaseSourcesPanelProps {
   caseId: string;

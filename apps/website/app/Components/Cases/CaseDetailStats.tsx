@@ -1,4 +1,4 @@
-import type { CaseDetailRecord } from "@/lib/mock-cases";
+import type { CaseDetailRecord } from "@/lib/data/mock-cases";
 
 interface CaseDetailStatsProps {
   stats: CaseDetailRecord["stats"];

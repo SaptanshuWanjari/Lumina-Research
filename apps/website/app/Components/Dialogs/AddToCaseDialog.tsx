@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Check, FolderKanban, Plus } from "lucide-react";
 
-import { caseRecords } from "@/lib/mock-cases";
+import { caseRecords } from "@/lib/data/mock-cases";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -83,17 +83,15 @@ export default function AddToCaseDialog({
                   key={caseItem.id}
                   type="button"
                   onClick={() => setSelectedCaseId(caseItem.id)}
-                  className={`flex items-center justify-between rounded-[20px] border px-4 py-4 text-left transition-colors ${
-                    selected
+                  className={`flex items-center justify-between rounded-[20px] border px-4 py-4 text-left transition-colors ${selected
                       ? "border-slate-900 bg-slate-900 text-white"
                       : "border-slate-200 bg-slate-50 text-slate-800 hover:border-slate-300"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-start gap-3">
                     <span
-                      className={`mt-0.5 inline-flex size-9 items-center justify-center rounded-full ${
-                        selected ? "bg-white/15 text-white" : "bg-white text-slate-700"
-                      }`}
+                      className={`mt-0.5 inline-flex size-9 items-center justify-center rounded-full ${selected ? "bg-white/15 text-white" : "bg-white text-slate-700"
+                        }`}
                     >
                       <FolderKanban className="size-4" />
                     </span>
@@ -119,7 +117,7 @@ export default function AddToCaseDialog({
 
         <DialogFooter>
           <Button variant="outline">Cancel</Button>
-          <Button 
+          <Button
             disabled={!selectedCaseId}
             onClick={() => {
               console.log(`Attach to Case: case ID ${selectedCaseId}`);

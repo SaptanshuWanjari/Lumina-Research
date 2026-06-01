@@ -1,7 +1,7 @@
 import { toAbsoluteUrl } from "@/lib/site-config";
 
-export function getApiCatalog() {
-  const apiAnchor = toAbsoluteUrl("/api");
+export function getApiCatalog(baseUrl?: string) {
+  const apiAnchor = toAbsoluteUrl("/api", baseUrl);
 
   return {
     linkset: [
@@ -9,25 +9,25 @@ export function getApiCatalog() {
         anchor: apiAnchor,
         "service-desc": [
           {
-            href: toAbsoluteUrl("/openapi.json"),
+            href: toAbsoluteUrl("/openapi.json", baseUrl),
             type: "application/openapi+json",
           },
         ],
         "service-doc": [
           {
-            href: toAbsoluteUrl("/docs/api"),
+            href: toAbsoluteUrl("/docs/api", baseUrl),
             type: "text/html",
           },
         ],
         status: [
           {
-            href: toAbsoluteUrl("/api/health"),
+            href: toAbsoluteUrl("/api/health", baseUrl),
             type: "application/json",
           },
         ],
         "service-meta": [
           {
-            href: toAbsoluteUrl("/.well-known/oauth-protected-resource"),
+            href: toAbsoluteUrl("/.well-known/oauth-protected-resource", baseUrl),
             type: "application/json",
           },
         ],
@@ -36,8 +36,8 @@ export function getApiCatalog() {
   };
 }
 
-export function getOpenApiDocument() {
-  const apiServerUrl = toAbsoluteUrl("/api");
+export function getOpenApiDocument(baseUrl?: string) {
+  const apiServerUrl = toAbsoluteUrl("/api", baseUrl);
 
   return {
     openapi: "3.1.0",

@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import type { CitationItem } from "@/lib/mock-reports";
+import type { CitationItem } from "@/lib/data/mock-reports";
 
 interface ClaimInspectorProps {
   claim: string;
@@ -27,12 +27,12 @@ export default function ClaimInspector({ claim, citation }: ClaimInspectorProps)
         )}
       </div>
 
-      <Button 
+      <Button
         onClick={() => {
           console.log("Ask for stronger citations: Re-evaluating claim with stricter criteria...");
           alert("Ask for stronger citations: Re-evaluating claim with stricter criteria...");
         }}
-        variant="outline" 
+        variant="outline"
         className="mt-3 h-9 rounded-full text-xs"
       >
         Ask for stronger citations

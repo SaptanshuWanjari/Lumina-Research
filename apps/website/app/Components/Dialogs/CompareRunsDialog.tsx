@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import type { CaseRunSummary } from "@/lib/mock-cases";
+import type { CaseRunSummary } from "@/lib/data/mock-cases";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -49,9 +49,8 @@ export default function CompareRunsDialog({ runs }: CompareRunsDialogProps) {
             return (
               <label
                 key={run.id}
-                className={`flex cursor-pointer items-center justify-between rounded-xl border px-3 py-2 ${
-                  checked ? "border-slate-900 bg-slate-100" : "border-slate-200 bg-white"
-                }`}
+                className={`flex cursor-pointer items-center justify-between rounded-xl border px-3 py-2 ${checked ? "border-slate-900 bg-slate-100" : "border-slate-200 bg-white"
+                  }`}
               >
                 <div>
                   <p className="text-sm font-semibold text-slate-800">{run.label}</p>
@@ -67,7 +66,7 @@ export default function CompareRunsDialog({ runs }: CompareRunsDialogProps) {
 
         <DialogFooter>
           <Button variant="outline">Cancel</Button>
-          <Button 
+          <Button
             disabled={selected.length < 2}
             onClick={() => {
               console.log(`Open Compare View: comparing ${selected.join(" and ")}`);

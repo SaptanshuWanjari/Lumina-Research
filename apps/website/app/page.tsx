@@ -7,7 +7,6 @@ import Footer from "./Components/Common/Footer";
 
 export default function Home() {
   return (
-    // redirect("/dashboard");
     <div className="bg-[##f5f7fa]">
       <NavBar />
       <Hero />

@@ -1,5 +1,7 @@
 import { getSiteUrl, getSupabaseAuthBaseUrl } from "@/lib/site-config";
 
+export const dynamic = "force-dynamic";
+
 async function fetchJson(url: string) {
   const response = await fetch(url, {
     headers: { Accept: "application/json" },
@@ -13,13 +15,14 @@ async function fetchJson(url: string) {
   return response.json();
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const baseUrl = new URL(request.url).origin;
   const authBaseUrl = getSupabaseAuthBaseUrl();
   if (!authBaseUrl) {
     return Response.json(
       {
         error: "Supabase auth is not configured",
-        issuer: getSiteUrl(),
+        issuer: getSiteUrl(baseUrl),
       },
       { status: 503 },
     );

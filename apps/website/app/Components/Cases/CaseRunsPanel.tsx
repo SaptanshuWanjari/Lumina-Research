@@ -3,8 +3,8 @@ import Link from "next/link";
 import CompareRunsDialog from "@/app/Components/Dialogs/CompareRunsDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { CaseRunSummary } from "@/lib/mock-cases";
-import { appRoutes } from "@/lib/mock-app";
+import type { CaseRunSummary } from "@/lib/data/mock-cases";
+import { appRoutes } from "@/lib/data/mock-app";
 
 interface CaseRunsPanelProps {
   runs: CaseRunSummary[];
@@ -33,36 +33,36 @@ export default function CaseRunsPanel({ runs }: CaseRunsPanelProps) {
       <div className="grid gap-4 md:grid-cols-2">
         {runs.map((run) => (
           <article key={run.id} className="rounded-[13px] bg-white p-5 shadow-sm ring-1 ring-black/5">
-          <div className="flex items-start justify-between">
-            <p className="font-semibold text-slate-800">{run.label}</p>
-            <Badge
-              className={`rounded-full px-3 py-1 text-[10px] font-bold tracking-wide ${runStatusClass(
-                run.status
-              )}`}
-            >
-              {run.status.replace("_", " ").toUpperCase()}
-            </Badge>
-          </div>
-          <p className="mt-2 text-sm text-slate-500">
-            Started {run.startedAt} · Duration {run.duration}
-          </p>
-          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-200">
-            <div
-              className="h-full rounded-full bg-slate-700"
-              style={{ width: `${run.stepsCompleted}%` }}
-            />
-          </div>
-          <p className="mt-2 text-xs text-slate-500">Steps completed: {run.stepsCompleted}%</p>
-          <div className="mt-4 flex items-center gap-2">
-            <Button asChild variant="outline" className="h-8 rounded-full px-3 text-xs">
-              <Link href={`/runs/${run.id}`}>View Run</Link>
-            </Button>
-            {run.status === "needs_review" ? (
-              <Button asChild className="h-8 rounded-full bg-slate-900 px-3 text-xs text-white hover:bg-slate-800">
-                <Link href={appRoutes.reportOverview}>Review Draft</Link>
+            <div className="flex items-start justify-between">
+              <p className="font-semibold text-slate-800">{run.label}</p>
+              <Badge
+                className={`rounded-full px-3 py-1 text-[10px] font-bold tracking-wide ${runStatusClass(
+                  run.status
+                )}`}
+              >
+                {run.status.replace("_", " ").toUpperCase()}
+              </Badge>
+            </div>
+            <p className="mt-2 text-sm text-slate-500">
+              Started {run.startedAt} · Duration {run.duration}
+            </p>
+            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+              <div
+                className="h-full rounded-full bg-slate-700"
+                style={{ width: `${run.stepsCompleted}%` }}
+              />
+            </div>
+            <p className="mt-2 text-xs text-slate-500">Steps completed: {run.stepsCompleted}%</p>
+            <div className="mt-4 flex items-center gap-2">
+              <Button asChild variant="outline" className="h-8 rounded-full px-3 text-xs">
+                <Link href={`/runs/${run.id}`}>View Run</Link>
               </Button>
-            ) : null}
-          </div>
+              {run.status === "needs_review" ? (
+                <Button asChild className="h-8 rounded-full bg-slate-900 px-3 text-xs text-white hover:bg-slate-800">
+                  <Link href={appRoutes.reportOverview}>Review Draft</Link>
+                </Button>
+              ) : null}
+            </div>
           </article>
         ))}
       </div>

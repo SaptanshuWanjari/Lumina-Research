@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import type { ReportOverview } from "@/lib/mock-reports";
+import type { ReportOverview } from "@/lib/data/mock-reports";
 
 interface ReportEditorSurfaceProps {
   report: ReportOverview;
@@ -84,11 +84,10 @@ export default function ReportEditorSurface({
               <button
                 type="button"
                 onClick={() => onSelectCitation(section.marker)}
-                className={`ml-2 rounded-md px-1.5 py-0.5 text-xs font-semibold ${
-                  selectedCitationId === section.marker
+                className={`ml-2 rounded-md px-1.5 py-0.5 text-xs font-semibold ${selectedCitationId === section.marker
                     ? "bg-slate-900 text-white"
                     : "bg-sky-100 text-sky-800"
-                }`}
+                  }`}
               >
                 {section.marker}
               </button>

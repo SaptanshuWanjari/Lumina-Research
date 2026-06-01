@@ -1,4 +1,4 @@
-import type { CaseActivityItem } from "@/lib/mock-cases";
+import type { CaseActivityItem } from "@/lib/data/mock-cases";
 
 interface CaseActivityPanelProps {
   activity: CaseActivityItem[];

@@ -5,7 +5,7 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
-import { appRoutes } from "@/lib/mock-app";
+import { appRoutes } from "@/lib/data/mock-app";
 
 export interface DashboardStat {
   icon: LucideIcon;

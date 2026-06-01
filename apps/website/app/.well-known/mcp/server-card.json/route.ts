@@ -1,6 +1,9 @@
-import { toAbsoluteUrl } from "@/lib/site-config";
+import { getBaseUrlFromRequest, toAbsoluteUrl } from "@/lib/site-config";
 
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+export async function GET(request: Request) {
+  const baseUrl = getBaseUrlFromRequest(request);
   return Response.json(
     {
       serverInfo: {
@@ -9,7 +12,7 @@ export async function GET() {
       },
       transport: {
         type: "http",
-        url: toAbsoluteUrl("/api/mcp"),
+        url: toAbsoluteUrl("/api/mcp", baseUrl),
       },
       capabilities: {
         tools: {

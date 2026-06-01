@@ -1,14 +1,18 @@
 import {
   getAgentSkillDigest,
   getAgentSkillDocuments,
+  toAbsoluteUrl,
 } from "@/lib/site-config";
 
-export async function GET() {
-  const skills = getAgentSkillDocuments().map((skill) => ({
+export const dynamic = "force-dynamic";
+
+export async function GET(request: Request) {
+  const baseUrl = new URL(request.url).origin;
+  const skills = getAgentSkillDocuments(baseUrl).map((skill) => ({
     name: skill.name,
     type: "skill-md",
     description: skill.description,
-    url: skill.urlPath,
+    url: toAbsoluteUrl(skill.urlPath, baseUrl),
     digest: getAgentSkillDigest(skill.body),
   }));
 

@@ -1,5 +1,7 @@
 import { getSupabaseAuthBaseUrl } from "@/lib/site-config";
 
+export const dynamic = "force-dynamic";
+
 async function fetchJson(url: string) {
   const response = await fetch(url, {
     headers: { Accept: "application/json" },

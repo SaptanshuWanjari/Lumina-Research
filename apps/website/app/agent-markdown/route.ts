@@ -5,10 +5,13 @@ import {
   getMarkdownForPath,
 } from "@/lib/site-config";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const path = url.searchParams.get("path") ?? "/";
-  const markdown = getMarkdownForPath(path);
+  const baseUrl = url.origin;
+  const markdown = getMarkdownForPath(path, baseUrl);
 
   if (!markdown) {
     return new Response("Markdown representation is not available for this path.", {

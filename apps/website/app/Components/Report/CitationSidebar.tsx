@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import type { CitationItem } from "@/lib/mock-reports";
+import type { CitationItem } from "@/lib/data/mock-reports";
 
 interface CitationSidebarProps {
   citations: CitationItem[];
@@ -43,9 +43,8 @@ export default function CitationSidebar({
               <button
                 type="button"
                 onClick={() => onSelectCitation(item.id)}
-                className={`w-full rounded-xl px-2 py-2 text-left ${
-                  active ? "bg-slate-100" : "hover:bg-slate-50"
-                }`}
+                className={`w-full rounded-xl px-2 py-2 text-left ${active ? "bg-slate-100" : "hover:bg-slate-50"
+                  }`}
               >
                 <p className="text-[10px] font-semibold tracking-[0.18em] text-slate-400">{item.id}</p>
                 <p className="mt-1 text-sm font-semibold text-slate-800">{item.title}</p>

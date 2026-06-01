@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import AddToCaseDialog from "@/app/Components/Dialogs/AddToCaseDialog";
-import { SearchResultItem } from "@/lib/mock-search";
+import { SearchResultItem } from "@/lib/data/mock-search";
 
 interface SearchResultCardProps {
   item: SearchResultItem;

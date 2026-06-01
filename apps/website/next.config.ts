@@ -16,6 +16,19 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: configDir,
   },
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          {
+            key: "Content-Signal",
+            value: "ai-train=no, search=yes, ai-input=no",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

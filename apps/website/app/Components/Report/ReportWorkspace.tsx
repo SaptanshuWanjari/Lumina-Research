@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import type { ReportOverview } from "@/lib/mock-reports";
+import type { ReportOverview } from "@/lib/data/mock-reports";
 import ReportEditorSurface from "@/app/Components/Report/ReportEditorSurface";
 import CitationSidebar from "@/app/Components/Report/CitationSidebar";
 import ClaimInspector from "@/app/Components/Report/ClaimInspector";

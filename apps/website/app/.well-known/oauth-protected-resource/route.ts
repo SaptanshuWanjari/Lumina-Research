@@ -1,13 +1,16 @@
-import { toAbsoluteUrl } from "@/lib/site-config";
+import { getBaseUrlFromRequest, toAbsoluteUrl } from "@/lib/site-config";
 
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+export async function GET(request: Request) {
+  const baseUrl = getBaseUrlFromRequest(request);
   return Response.json(
     {
-      resource: toAbsoluteUrl("/api"),
-      authorization_servers: [toAbsoluteUrl("/.well-known/openid-configuration")],
+      resource: toAbsoluteUrl("/api", baseUrl),
+      authorization_servers: [toAbsoluteUrl("/.well-known/openid-configuration", baseUrl)],
       bearer_methods_supported: ["header", "cookie"],
       scopes_supported: ["openid", "email", "profile"],
-      resource_documentation: toAbsoluteUrl("/docs/api"),
+      resource_documentation: toAbsoluteUrl("/docs/api", baseUrl),
     },
     {
       status: 200,

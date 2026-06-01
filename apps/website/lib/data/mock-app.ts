@@ -8,8 +8,8 @@ import {
   Sparkles,
   Workflow,
 } from "lucide-react";
-import { caseDetailRecords } from "@/lib/mock-cases";
-import { reports } from "@/lib/mock-reports";
+import { caseDetailRecords } from "@/lib/data/mock-cases";
+import { reports } from "@/lib/data/mock-reports";
 
 export type AppNavItem = {
   label: string;

@@ -10,8 +10,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-import type { CaseDetailRecord } from "@/lib/mock-cases";
-import { appRoutes } from "@/lib/mock-app";
+import type { CaseDetailRecord } from "@/lib/data/mock-cases";
+import { appRoutes } from "@/lib/data/mock-app";
 
 interface CaseControlCenterProps {
   entry: CaseDetailRecord;

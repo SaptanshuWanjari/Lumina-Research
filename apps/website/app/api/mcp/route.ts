@@ -76,12 +76,13 @@ function getTools() {
   ];
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const baseUrl = new URL(request.url).origin;
   return Response.json(
     {
       name: "lumina-research-website-mcp",
       transport: "jsonrpc-over-http",
-      endpoint: toAbsoluteUrl("/api/mcp"),
+      endpoint: toAbsoluteUrl("/api/mcp", baseUrl),
       tools: getTools(),
     },
     {
@@ -94,6 +95,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const baseUrl = new URL(request.url).origin;
   const payload = (await request.json()) as JsonRpcRequest;
   const method = payload.method;
 
@@ -130,15 +132,17 @@ export async function POST(request: Request) {
             type: "text",
             text: JSON.stringify(
               {
-                site: getSiteUrl(),
-                apiCatalog: toAbsoluteUrl("/.well-known/api-catalog"),
-                openApi: toAbsoluteUrl("/openapi.json"),
-                apiDocs: toAbsoluteUrl("/docs/api"),
+                site: getSiteUrl(baseUrl),
+                apiCatalog: toAbsoluteUrl("/.well-known/api-catalog", baseUrl),
+                openApi: toAbsoluteUrl("/openapi.json", baseUrl),
+                apiDocs: toAbsoluteUrl("/docs/api", baseUrl),
                 openIdConfiguration: toAbsoluteUrl(
                   "/.well-known/openid-configuration",
+                  baseUrl,
                 ),
                 protectedResource: toAbsoluteUrl(
                   "/.well-known/oauth-protected-resource",
+                  baseUrl,
                 ),
               },
               null,
@@ -155,10 +159,10 @@ export async function POST(request: Request) {
           {
             type: "text",
             text: JSON.stringify(
-              getPublicSitePages().map((page) => ({
+              getPublicSitePages(baseUrl).map((page) => ({
                 path: page.path,
                 title: page.title,
-                url: toAbsoluteUrl(page.path),
+                url: toAbsoluteUrl(page.path, baseUrl),
               })),
               null,
               2,
@@ -178,7 +182,7 @@ export async function POST(request: Request) {
         content: [
           {
             type: "text",
-            text: toAbsoluteUrl(path),
+            text: toAbsoluteUrl(path, baseUrl),
           },
         ],
       });

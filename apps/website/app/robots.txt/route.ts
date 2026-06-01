@@ -1,4 +1,6 @@
-import { contentSignalPolicy, toAbsoluteUrl } from "@/lib/site-config";
+import { contentSignalPolicy, getBaseUrlFromRequest, toAbsoluteUrl } from "@/lib/site-config";
+
+export const dynamic = "force-dynamic";
 
 const publicAllowPaths = ["/", "/login", "/signup", "/docs/api", "/.well-known/"];
 const privateDisallowPaths = [
@@ -38,14 +40,16 @@ function buildRuleBlock(userAgents: string | string[], allowRoot = true) {
   return lines.join("\n");
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const baseUrl = getBaseUrlFromRequest(request);
   const body = [
     buildRuleBlock("*"),
     buildRuleBlock("OAI-SearchBot"),
     buildRuleBlock("PerplexityBot"),
     buildRuleBlock("ChatGPT-User"),
     buildRuleBlock(["GPTBot", "Claude-Web", "Google-Extended", "CCBot"], false),
-    `Sitemap: ${toAbsoluteUrl("/sitemap.xml")}`,
+    `Sitemap: ${toAbsoluteUrl("/sitemap.xml", baseUrl)}`,
+    `LLMs-txt: ${toAbsoluteUrl("/llms.txt", baseUrl)}`,
     `Content-Signal: ${contentSignalPolicy}`,
   ].join("\n\n");
 

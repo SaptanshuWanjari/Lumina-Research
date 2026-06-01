@@ -10,7 +10,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { dashboardNeedsReview, type DashboardReviewItem } from "@/lib/mock-dashboard";
+import { dashboardNeedsReview, type DashboardReviewItem } from "@/lib/data/mock-dashboard";
 
 interface NeedsReviewProps {
   items?: DashboardReviewItem[];
@@ -54,11 +54,10 @@ const NeedsReview = ({
             <div className="mb-3 flex items-start justify-between">
               <div className="flex items-center gap-2">
                 <div
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                    item.type === "CONFLICT DETECTION"
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.type === "CONFLICT DETECTION"
                       ? "bg-red-100"
                       : "bg-slate-100"
-                  }`}
+                    }`}
                 >
                   {item.type === "CONFLICT DETECTION" ? (
                     <TriangleAlert

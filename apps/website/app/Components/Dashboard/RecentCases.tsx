@@ -12,7 +12,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { FolderOpen } from "lucide-react";
-import { dashboardRecentCases, type DashboardRecentCase } from "@/lib/mock-dashboard";
+import { dashboardRecentCases, type DashboardRecentCase } from "@/lib/data/mock-dashboard";
 
 interface RecentCasesProps {
   cases?: DashboardRecentCase[];
@@ -62,16 +62,16 @@ const RecentCases = ({
       ) : (
         <>
           <div className="grid grid-cols-[1fr_120px_120px_48px] gap-4 border-b border-slate-200 pb-3">
-          <div className="text-[14px] font-semibold tracking-widest text-slate-500 uppercase">
-            Case Title
-          </div>
-          <div className="text-[14px] font-semibold tracking-widest text-slate-500 uppercase">
-            Status
-          </div>
-          <div className="text-[14px] font-semibold tracking-widest text-slate-500 uppercase">
-            Last Updated
-          </div>
-          <div></div>
+            <div className="text-[14px] font-semibold tracking-widest text-slate-500 uppercase">
+              Case Title
+            </div>
+            <div className="text-[14px] font-semibold tracking-widest text-slate-500 uppercase">
+              Status
+            </div>
+            <div className="text-[14px] font-semibold tracking-widest text-slate-500 uppercase">
+              Last Updated
+            </div>
+            <div></div>
           </div>
 
           {cases.map((caseItem) => (

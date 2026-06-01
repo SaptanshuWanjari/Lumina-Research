@@ -1,13 +1,16 @@
 import { getAgentSkillDocuments } from "@/lib/site-config";
 
+export const dynamic = "force-dynamic";
+
 type Params = Promise<{ skillName: string }>;
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Params },
 ) {
+  const baseUrl = new URL(request.url).origin;
   const { skillName } = await context.params;
-  const skill = getAgentSkillDocuments().find((entry) => entry.name === skillName);
+  const skill = getAgentSkillDocuments(baseUrl).find((entry) => entry.name === skillName);
 
   if (!skill) {
     return new Response("Not found", { status: 404 });

@@ -31,7 +31,11 @@ function normalizeUrl(value: string) {
   return `https://${trimmed.replace(/\/+$/, "")}`;
 }
 
-export function getSiteUrl() {
+export function getSiteUrl(baseUrl?: string) {
+  if (baseUrl) {
+    return normalizeUrl(baseUrl);
+  }
+
   const siteUrl =
     process.env.NEXT_PUBLIC_SITE_URL ??
     process.env.SITE_URL ??
@@ -40,8 +44,14 @@ export function getSiteUrl() {
   return normalizeUrl(siteUrl ?? DEFAULT_SITE_URL);
 }
 
-export function toAbsoluteUrl(path: string) {
-  return new URL(path, `${getSiteUrl()}/`).toString();
+export function toAbsoluteUrl(path: string, baseUrl?: string) {
+  return new URL(path, `${getSiteUrl(baseUrl)}/`).toString();
+}
+
+export function getBaseUrlFromRequest(request: Request) {
+  const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
+  const proto = request.headers.get("x-forwarded-proto") || "https";
+  return host ? `${proto}://${host}` : new URL(request.url).origin;
 }
 
 export function getSupabaseUrl() {
@@ -53,7 +63,7 @@ export function getSupabaseAuthBaseUrl() {
   return supabaseUrl ? `${supabaseUrl}/auth/v1` : null;
 }
 
-export function getPublicSitePages(): PublicSitePage[] {
+export function getPublicSitePages(baseUrl?: string): PublicSitePage[] {
   return [
     {
       path: "/",
@@ -61,22 +71,22 @@ export function getPublicSitePages(): PublicSitePage[] {
       description:
         "AI research and decision workspace for running cases, comparing evidence, and shipping cited reports.",
       markdown: `# Lumina Research
-
+ 
 Lumina Research is a single-user AI research and decision workspace.
-
+ 
 ## What you can do
-
+ 
 - Create and manage research cases
 - Run analysis workflows and review outputs
 - Trace claims back to cited source material
 - Compare reports, sources, and run health from one workspace
-
+ 
 ## Useful entry points
-
-- Sign in: ${toAbsoluteUrl("/login")}
-- Create an account: ${toAbsoluteUrl("/signup")}
-- API catalog: ${toAbsoluteUrl("/.well-known/api-catalog")}
-- API docs: ${toAbsoluteUrl("/docs/api")}
+ 
+- Sign in: ${toAbsoluteUrl("/login", baseUrl)}
+- Create an account: ${toAbsoluteUrl("/signup", baseUrl)}
+- API catalog: ${toAbsoluteUrl("/.well-known/api-catalog", baseUrl)}
+- API docs: ${toAbsoluteUrl("/docs/api", baseUrl)}
 `,
       changeFrequency: "weekly",
       priority: 1,
@@ -87,15 +97,15 @@ Lumina Research is a single-user AI research and decision workspace.
       description:
         "Authenticate into the Lumina Research workspace with Supabase-backed sign-in.",
       markdown: `# Log In
-
+ 
 Sign in to access the Lumina Research workspace.
-
+ 
 ## Supported flows
-
+ 
 - Email and password sign-in
 - Google OAuth
 - GitHub OAuth
-
+ 
 After authentication, the app redirects into the workspace dashboard.
 `,
       changeFrequency: "monthly",
@@ -107,11 +117,11 @@ After authentication, the app redirects into the workspace dashboard.
       description:
         "Create a Lumina Research account and start a new research workspace session.",
       markdown: `# Sign Up
-
+ 
 Create a Lumina Research account.
-
+ 
 ## What happens next
-
+ 
 - A workspace session is created through Supabase Auth
 - You can enter the dashboard and start creating cases
 - Protected API routes become available once authenticated
@@ -125,19 +135,19 @@ Create a Lumina Research account.
       description:
         "Discovery document for Lumina Research APIs, auth metadata, health checks, and OpenAPI description.",
       markdown: `# Lumina Research API
-
+ 
 Machine-discoverable API resources for Lumina Research.
-
+ 
 ## Discovery
-
-- OpenAPI: ${toAbsoluteUrl("/openapi.json")}
-- API catalog: ${toAbsoluteUrl("/.well-known/api-catalog")}
-- Health: ${toAbsoluteUrl("/api/health")}
-- OIDC metadata: ${toAbsoluteUrl("/.well-known/openid-configuration")}
-- OAuth protected resource metadata: ${toAbsoluteUrl("/.well-known/oauth-protected-resource")}
-
+ 
+- OpenAPI: ${toAbsoluteUrl("/openapi.json", baseUrl)}
+- API catalog: ${toAbsoluteUrl("/.well-known/api-catalog", baseUrl)}
+- Health: ${toAbsoluteUrl("/api/health", baseUrl)}
+- OIDC metadata: ${toAbsoluteUrl("/.well-known/openid-configuration", baseUrl)}
+- OAuth protected resource metadata: ${toAbsoluteUrl("/.well-known/oauth-protected-resource", baseUrl)}
+ 
 ## Notes
-
+ 
 - Browser UI uses Supabase-backed authentication
 - Authenticated application routes and BFF routes are intentionally excluded from public crawl surfaces
 `,
@@ -147,8 +157,8 @@ Machine-discoverable API resources for Lumina Research.
   ];
 }
 
-export function getMarkdownForPath(path: string) {
-  return getPublicSitePages().find((page) => page.path === path)?.markdown ?? null;
+export function getMarkdownForPath(path: string, baseUrl?: string) {
+  return getPublicSitePages(baseUrl).find((page) => page.path === path)?.markdown ?? null;
 }
 
 export function estimateMarkdownTokens(markdown: string) {
@@ -163,7 +173,7 @@ export type AgentSkillDocument = {
   body: string;
 };
 
-export function getAgentSkillDocuments(): AgentSkillDocument[] {
+export function getAgentSkillDocuments(baseUrl?: string): AgentSkillDocument[] {
   return [
     {
       name: "workspace-overview",
@@ -174,20 +184,20 @@ export function getAgentSkillDocuments(): AgentSkillDocument[] {
 name: workspace-overview
 description: Summarize Lumina Research, its public entry points, and the main machine-discovery URLs.
 ---
-
+ 
 # Workspace Overview
-
+ 
 Use this skill when you need a compact overview of the Lumina Research website.
-
+ 
 ## Primary URLs
-
-- Home: ${toAbsoluteUrl("/")}
-- API catalog: ${toAbsoluteUrl("/.well-known/api-catalog")}
-- API docs: ${toAbsoluteUrl("/docs/api")}
-- OpenAPI: ${toAbsoluteUrl("/openapi.json")}
-
+ 
+- Home: ${toAbsoluteUrl("/", baseUrl)}
+- API catalog: ${toAbsoluteUrl("/.well-known/api-catalog", baseUrl)}
+- API docs: ${toAbsoluteUrl("/docs/api", baseUrl)}
+- OpenAPI: ${toAbsoluteUrl("/openapi.json", baseUrl)}
+ 
 ## Purpose
-
+ 
 Lumina Research is an AI research and decision workspace for cases, evidence review, and cited reporting.
 `,
     },
@@ -200,19 +210,19 @@ Lumina Research is an AI research and decision workspace for cases, evidence rev
 name: api-discovery
 description: Locate the API catalog, OpenAPI document, and health endpoint for Lumina Research.
 ---
-
+ 
 # API Discovery
-
+ 
 Use this skill when you need programmatic API discovery details.
-
+ 
 ## Endpoints
-
-- API catalog: ${toAbsoluteUrl("/.well-known/api-catalog")}
-- OpenAPI description: ${toAbsoluteUrl("/openapi.json")}
-- Health status: ${toAbsoluteUrl("/api/health")}
-
+ 
+- API catalog: ${toAbsoluteUrl("/.well-known/api-catalog", baseUrl)}
+- OpenAPI description: ${toAbsoluteUrl("/openapi.json", baseUrl)}
+- Health status: ${toAbsoluteUrl("/api/health", baseUrl)}
+ 
 ## Guidance
-
+ 
 Prefer the API catalog first, then follow the service-desc and service-doc links.
 `,
     },
@@ -225,19 +235,19 @@ Prefer the API catalog first, then follow the service-desc and service-doc links
 name: auth-discovery
 description: Find OpenID Connect discovery and OAuth protected resource metadata for authenticated API access.
 ---
-
+ 
 # Auth Discovery
-
+ 
 Use this skill when you need to determine how Lumina Research protects its APIs.
-
+ 
 ## Endpoints
-
-- OIDC discovery: ${toAbsoluteUrl("/.well-known/openid-configuration")}
-- OAuth authorization server metadata: ${toAbsoluteUrl("/.well-known/oauth-authorization-server")}
-- Protected resource metadata: ${toAbsoluteUrl("/.well-known/oauth-protected-resource")}
-
+ 
+- OIDC discovery: ${toAbsoluteUrl("/.well-known/openid-configuration", baseUrl)}
+- OAuth authorization server metadata: ${toAbsoluteUrl("/.well-known/oauth-authorization-server", baseUrl)}
+- Protected resource metadata: ${toAbsoluteUrl("/.well-known/oauth-protected-resource", baseUrl)}
+ 
 ## Guidance
-
+ 
 Use the protected resource metadata first to learn which authorization server issues tokens for this site.
 `,
     },

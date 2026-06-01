@@ -1,4 +1,6 @@
-import { getPublicSitePages, toAbsoluteUrl } from "@/lib/site-config";
+import { getBaseUrlFromRequest, getPublicSitePages, toAbsoluteUrl } from "@/lib/site-config";
+
+export const dynamic = "force-dynamic";
 
 function escapeXml(value: string) {
   return value
@@ -9,12 +11,13 @@ function escapeXml(value: string) {
     .replaceAll("'", "&apos;");
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const baseUrl = getBaseUrlFromRequest(request);
   const lastModified = new Date().toISOString();
-  const urls = getPublicSitePages()
+  const urls = getPublicSitePages(baseUrl)
     .map((page) => {
       return `  <url>
-    <loc>${escapeXml(toAbsoluteUrl(page.path))}</loc>
+    <loc>${escapeXml(toAbsoluteUrl(page.path, baseUrl))}</loc>
     <lastmod>${lastModified}</lastmod>
     <changefreq>${page.changeFrequency}</changefreq>
     <priority>${page.priority.toFixed(1)}</priority>
