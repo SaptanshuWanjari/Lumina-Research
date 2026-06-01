@@ -1,7 +1,7 @@
 export type CaseStatus = "active" | "processing" | "urgent" | "paused";
 export type CaseDetailStatus = "ANALYZING" | "READY";
 export type SourceStatus = "pending" | "ingesting" | "indexed" | "failed";
-export type RunStatus = "queued" | "running" | "needs_review" | "complete";
+export type RunStatus = "queued" | "running" | "needs_review" | "complete" | "failed" | "resuming" | "cancelled";
 
 export interface CaseRecord {
   id: string;
@@ -31,6 +31,7 @@ export interface CaseRunSummary {
   startedAt: string;
   duration: string;
   stepsCompleted: number;
+  errorMessage?: string | null;
 }
 
 export interface CaseActivityItem {

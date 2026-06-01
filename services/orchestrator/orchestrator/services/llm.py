@@ -9,6 +9,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from orchestrator.core.config import settings
 from orchestrator.core.database import SupabaseRunStore, get_supabase
+from orchestrator.core.errors import NonRetryableError, classify_llm_error
 from orchestrator.services.secrets import decrypt_secret
 
 
@@ -34,9 +35,17 @@ class GeminiService:
         )
 
     def invoke_text(self, system: str, user: str) -> str:
-        response = self.model.invoke(
-            [SystemMessage(content=system), HumanMessage(content=user)]
-        )
+        try:
+            response = self.model.invoke(
+                [SystemMessage(content=system), HumanMessage(content=user)]
+            )
+        except NonRetryableError:
+            raise
+        except Exception as exc:
+            non_retryable = classify_llm_error(exc)
+            if non_retryable:
+                raise non_retryable from exc
+            raise
         content = getattr(response, "content", "")
         return content if isinstance(content, str) else json.dumps(content)
 
@@ -49,20 +58,7 @@ class GeminiService:
 
 
 def _repair_groq_tool_args(message: Any) -> Any:
-    """Fix two classes of Groq/Llama tool-call formatting bugs.
 
-    **Bug 1 – bare-array args for write_todos**:
-    Groq's Llama models sometimes call ``write_todos`` with a bare JSON array
-    as arguments instead of the expected ``{"todos": [...]}``.  We wrap it.
-
-    **Bug 2 – JSON embedded in the tool name**:
-    The model occasionally generates a call like
-    ``grep {"pattern": "...", "glob": "**/*.js"}`` where the entire JSON is
-    concatenated into the function name string.  Groq rejects this server-side
-    because the synthesized name doesn't match any declared tool.  We strip
-    these malformed calls so the message is still valid, and the model will
-    self-correct on the next turn.
-    """
     from langchain_core.messages import AIMessage
 
     if not isinstance(message, AIMessage) or not message.tool_calls:
@@ -184,7 +180,12 @@ def _make_groq_subclass() -> type:
         def _generate(self, *args: Any, **kwargs: Any) -> Any:
             try:
                 return self._postprocess(super()._generate(*args, **kwargs))
+            except NonRetryableError:
+                raise
             except Exception as exc:
+                non_retryable = classify_llm_error(exc)
+                if non_retryable:
+                    raise non_retryable from exc
                 if self._is_tool_validation_error(exc):
                     return _make_tool_error_result(self._extract_tool_error_detail(exc))
                 raise
@@ -192,7 +193,12 @@ def _make_groq_subclass() -> type:
         async def _agenerate(self, *args: Any, **kwargs: Any) -> Any:
             try:
                 return self._postprocess(await super()._agenerate(*args, **kwargs))
+            except NonRetryableError:
+                raise
             except Exception as exc:
+                non_retryable = classify_llm_error(exc)
+                if non_retryable:
+                    raise non_retryable from exc
                 if self._is_tool_validation_error(exc):
                     return _make_tool_error_result(self._extract_tool_error_detail(exc))
                 raise
@@ -214,9 +220,17 @@ class GroqService:
         self._raw_model = self.model
 
     def invoke_text(self, system: str, user: str) -> str:
-        response = self.model.invoke(
-            [SystemMessage(content=system), HumanMessage(content=user)]
-        )
+        try:
+            response = self.model.invoke(
+                [SystemMessage(content=system), HumanMessage(content=user)]
+            )
+        except NonRetryableError:
+            raise
+        except Exception as exc:
+            non_retryable = classify_llm_error(exc)
+            if non_retryable:
+                raise non_retryable from exc
+            raise
         content = getattr(response, "content", "")
         return content if isinstance(content, str) else json.dumps(content)
 

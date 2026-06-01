@@ -17,3 +17,5 @@ celery_app.conf.task_routes = {
     "orchestrator.tasks.runs.resume_run": {"queue": settings.ORCHESTRATOR_QUEUE_NAME},
     "orchestrator.tasks.runs.retry_run": {"queue": settings.ORCHESTRATOR_QUEUE_NAME},
 }
+celery_app.conf.task_max_retries = 0
+celery_app.conf.task_acks_late = True

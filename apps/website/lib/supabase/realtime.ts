@@ -13,6 +13,7 @@ export type RunRealtimeUpdate = {
   status: string;
   currentStep?: string | null;
   needsReview?: boolean | null;
+  errorMessage?: string | null;
 };
 
 export type ReportRealtimeUpdate = {
@@ -46,6 +47,8 @@ function mapRun(payload: RealtimePostgresChangesPayload<Record<string, unknown>>
       typeof row.current_step === "string" ? row.current_step : null,
     needsReview:
       typeof row.needs_review === "boolean" ? row.needs_review : null,
+    errorMessage:
+      typeof row.error_message === "string" ? row.error_message : null,
   } satisfies RunRealtimeUpdate;
 }
 

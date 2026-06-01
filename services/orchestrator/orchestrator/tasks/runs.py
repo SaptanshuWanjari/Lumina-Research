@@ -12,6 +12,7 @@ from orchestrator.core.database import (
     get_supabase,
     utcnow_iso,
 )
+from orchestrator.core.errors import NonRetryableError
 from orchestrator.graph.build import build_graph
 from orchestrator.services.checkpointer import postgres_checkpointer
 
@@ -61,6 +62,10 @@ def _current_step(store: SupabaseRunStore, run_id: str, owner_user_id: str, fall
 
 
 def _format_error(exc: Exception) -> str:
+    # NonRetryableError messages are already human-readable.
+    if isinstance(exc, NonRetryableError):
+        return str(exc)
+
     msg = str(exc)
     msg_lower = msg.lower()
     
@@ -130,6 +135,22 @@ def _start_run(run_id: str) -> dict[str, str]:
             )
             return {"run_id": run_id, "status": "complete"}
         return {"run_id": run_id, "status": "needs_review"}
+    except NonRetryableError as exc:
+        failed_step = _current_step(store, run_id, owner_user_id, "deep_research")
+        error_msg = str(exc)
+        store.fail_step(run_id, owner_user_id, failed_step, error_msg)
+        store.update_run(
+            run_id,
+            owner_user_id,
+            {
+                "status": "failed",
+                "needs_review": False,
+                "error_message": error_msg,
+                "checkpoint_ref": run_id,
+                "checkpoint_at": utcnow_iso(),
+            },
+        )
+        return {"run_id": run_id, "status": "failed", "error": error_msg}
     except Exception as exc:
         failed_step = _current_step(store, run_id, owner_user_id, "deep_research")
         error_msg = _format_error(exc)
@@ -197,6 +218,23 @@ def _retry_run(run_id: str) -> dict[str, str]:
             )
             return {"run_id": run_id, "status": "complete"}
         return {"run_id": run_id, "status": "needs_review"}
+    except NonRetryableError as exc:
+        failed_step = _current_step(store, run_id, owner_user_id, entry_point)
+        error_msg = str(exc)
+        store.fail_step(run_id, owner_user_id, failed_step, error_msg)
+        store.update_run(
+            run_id,
+            owner_user_id,
+            {
+                "status": "failed",
+                "needs_review": False,
+                "current_step": entry_point,
+                "error_message": error_msg,
+                "checkpoint_ref": run_id,
+                "checkpoint_at": utcnow_iso(),
+            },
+        )
+        return {"run_id": run_id, "status": "failed", "error": error_msg}
     except Exception as exc:
         failed_step = _current_step(store, run_id, owner_user_id, entry_point)
         error_msg = _format_error(exc)
@@ -274,6 +312,22 @@ def _resume_run(run_id: str) -> dict[str, str]:
             },
         )
         return {"run_id": run_id, "status": "complete"}
+    except NonRetryableError as exc:
+        failed_step = _current_step(store, run_id, owner_user_id, "publish")
+        error_msg = str(exc)
+        store.fail_step(run_id, owner_user_id, failed_step, error_msg)
+        store.update_run(
+            run_id,
+            owner_user_id,
+            {
+                "status": "failed",
+                "needs_review": False,
+                "error_message": error_msg,
+                "checkpoint_ref": run_id,
+                "checkpoint_at": utcnow_iso(),
+            },
+        )
+        return {"run_id": run_id, "status": "failed", "error": error_msg}
     except Exception as exc:
         failed_step = _current_step(store, run_id, owner_user_id, "publish")
         error_msg = _format_error(exc)

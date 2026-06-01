@@ -13,8 +13,12 @@ interface CaseRunsPanelProps {
 function runStatusClass(status: CaseRunSummary["status"]) {
   if (status === "queued") return "bg-slate-200 text-slate-700";
   if (status === "running") return "bg-sky-100 text-sky-800";
+  if (status === "resuming") return "bg-blue-100 text-blue-800";
   if (status === "needs_review") return "bg-amber-100 text-amber-800";
-  return "bg-emerald-100 text-emerald-800";
+  if (status === "complete") return "bg-emerald-100 text-emerald-800";
+  if (status === "failed") return "bg-rose-100 text-rose-800";
+  if (status === "cancelled") return "bg-slate-200 text-slate-700";
+  return "bg-slate-100 text-slate-700";
 }
 
 export default function CaseRunsPanel({ runs }: CaseRunsPanelProps) {
@@ -46,6 +50,11 @@ export default function CaseRunsPanel({ runs }: CaseRunsPanelProps) {
             <p className="mt-2 text-sm text-slate-500">
               Started {run.startedAt} · Duration {run.duration}
             </p>
+            {run.status === "failed" && run.errorMessage ? (
+              <p className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700 ring-1 ring-rose-200">
+                {run.errorMessage}
+              </p>
+            ) : null}
             <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-200">
               <div
                 className="h-full rounded-full bg-slate-700"
