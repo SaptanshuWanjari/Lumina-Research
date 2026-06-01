@@ -81,7 +81,7 @@ jobs:
             --timeout 3600 \
             --max-instances 100 \
             --concurrency 80 \
-            --update-env-vars AI_SETTINGS_ENCRYPTION_KEY=${{ secrets.AI_SETTINGS_ENCRYPTION_KEY }} \
+            --update-secrets AI_SETTINGS_ENCRYPTION_KEY=AI_SETTINGS_ENCRYPTION_KEY:latest \
             --allow-unauthenticated
 
       - name: Build and push Worker image
@@ -108,7 +108,7 @@ jobs:
             --cpu 2 \
             --timeout 3600 \
             --max-instances 50 \
-            --update-env-vars AI_SETTINGS_ENCRYPTION_KEY=${{ secrets.AI_SETTINGS_ENCRYPTION_KEY }} \
+            --update-secrets AI_SETTINGS_ENCRYPTION_KEY=AI_SETTINGS_ENCRYPTION_KEY:latest \
             --no-allow-unauthenticated
 
       - name: Build and push Orchestrator image
@@ -135,7 +135,7 @@ jobs:
             --cpu 2 \
             --timeout 3600 \
             --max-instances 20 \
-            --update-env-vars AI_SETTINGS_ENCRYPTION_KEY=${{ secrets.AI_SETTINGS_ENCRYPTION_KEY }} \
+            --update-secrets AI_SETTINGS_ENCRYPTION_KEY=AI_SETTINGS_ENCRYPTION_KEY:latest \
             --no-allow-unauthenticated
 
       - name: Print deployment info
