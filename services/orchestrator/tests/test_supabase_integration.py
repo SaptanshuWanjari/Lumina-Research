@@ -78,7 +78,6 @@ def test_run_store_writes_status_steps_artifacts_and_report_versions(
         "Validation Draft",
         "Draft summary",
         "## Draft\n\nEvidence-backed draft.",
-        {"citations": {"[1]": "77777777-7777-7777-7777-777777777777"}},
     )
     assert draft["status"] == "draft"
     assert draft["run_id"] == integration_run

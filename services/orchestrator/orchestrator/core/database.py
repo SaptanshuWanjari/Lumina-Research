@@ -246,7 +246,6 @@ class SupabaseRunStore:
         title: str,
         summary: str,
         content_markdown: str,
-        citations_json: dict[str, Any],
     ) -> dict[str, Any]:
         now = utcnow_iso()
         existing = self.latest_report_version(case_id, run_id, owner_user_id, "draft")
@@ -254,7 +253,6 @@ class SupabaseRunStore:
             "title": title,
             "summary": summary,
             "content_markdown": content_markdown,
-            "citations_json": citations_json,
             "updated_at": now,
         }
         if existing:

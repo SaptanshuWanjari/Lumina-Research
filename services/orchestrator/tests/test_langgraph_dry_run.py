@@ -99,7 +99,6 @@ class DryRunStore:
         title: str,
         summary: str,
         content_markdown: str,
-        citations_json: dict[str, Any],
     ) -> dict[str, Any]:
         self.report = {
             "id": "report-dry",
@@ -110,7 +109,6 @@ class DryRunStore:
             "title": title,
             "summary": summary,
             "content_markdown": content_markdown,
-            "citations_json": citations_json,
             "updated_at": "2026-05-11T00:00:00+00:00",
         }
         return self.report

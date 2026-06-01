@@ -283,7 +283,6 @@ def human_review_node(state: OrchestratorState) -> dict[str, Any]:
         settings.REPORT_TITLE_PREFIX,
         state.get("analysis_notes", "")[:2000],
         state.get("draft_report", ""),
-        {},
     )
     if run_config.get("human_review_enabled") is False:
         store.finish_step(
