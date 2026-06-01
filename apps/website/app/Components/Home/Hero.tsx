@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { Button } from "../../../components/ui/button";
+import { Dialog, DialogTrigger, DialogContent } from "../../../components/ui/dialog";
 
 // import { FcGoogle } from "react-icons/fc";
 // import { FaGithub } from "react-icons/fa";
@@ -34,14 +35,24 @@ const Hero = () => {
                   </button>
                 </Link>
 
-                <Link href={appRoutes.dashboard} className="w-full sm:w-auto">
-                  <Button
-                    variant="outline"
-                    className="w-full rounded-full border border-black/20 bg-[#d1e5f4] px-8 py-7 text-base font-semibold sm:w-auto sm:text-lg"
-                  >
-                    View Demo
-                  </Button>
-                </Link>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-full border border-black/20 bg-[#d1e5f4] px-8 py-7 text-base font-semibold sm:w-auto sm:text-lg"
+                    >
+                      View Demo
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-4xl p-0 overflow-hidden border-none bg-transparent shadow-none">
+                    <video 
+                      src="/demo.mp4" 
+                      controls 
+                      autoPlay 
+                      className="w-full h-auto rounded-2xl"
+                    />
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
 
