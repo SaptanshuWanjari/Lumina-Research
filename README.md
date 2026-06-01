@@ -164,3 +164,84 @@ Copy `infra/env/.env.example` to `infra/env/.env` and fill in:
 | GOOGLE_API_KEY | Gemini API key |
 | AI_SETTINGS_ENCRYPTION_KEY | Encryption key for stored provider credentials |
 | OLLAMA_BASE_URL | Ollama endpoint |
+
+---
+
+### Sample n8n Workflow
+
+A ready-to-use example workflow is included at [`n8n-scraper.json`](./n8n-scraper.json). It fetches Wikipedia summaries for three RAG-related topics (Retrieval-augmented generation, Large language models, and Vector databases) and returns them as a single combined text block.
+
+![n8n-workflow](./workflow.png)
+
+**Workflow structure:**
+```
+Webhook → [Wikipedia: RAG, Wikipedia: LLM, Wikipedia: Vector DB]
+        → Merge Results → Combine Text → Respond to Webhook
+```
+
+**Expected response shape:**
+```json
+{
+  "text": "## Retrieval-augmented generation\n...\n---\n## Large language model\n...",
+  "sources": ["https://en.wikipedia.org/wiki/...", "..."],
+  "article_count": 3
+}
+```
+
+### Setting Up n8n Locally
+
+1. **Start n8n via Docker:**
+   ```bash
+   docker run -it --rm -p 5678:5678 n8nio/n8n
+   ```
+
+2. **Import the sample workflow:**
+   - Open `http://localhost:5678` in your browser
+   - Go to **Workflows → Import from file**
+   - Select `n8n-scraper.json` from the project root
+
+3. **Test the webhook** (with the workflow in "Listen for test event" mode):
+   ```bash
+   curl -s -X POST http://localhost:5678/webhook-test/rag-scraper \
+     -H "Content-Type: application/json" \
+     -d '{"case_id":"test","source_id":"test"}' | python3 -m json.tool
+   ```
+   You should see a JSON object with a `text` field containing the article content.
+
+### Using n8n with Cloud-Deployed Lumina (ngrok)
+
+If your Lumina worker is running on Cloud Run (or any cloud environment), it cannot reach `localhost`. Use **ngrok** to expose your local n8n to a public URL:
+
+1. **Install and authenticate ngrok:**
+   ```bash
+   ngrok config add-authtoken <YOUR_TOKEN>
+   ```
+
+2. **Expose n8n:**
+   ```bash
+   ngrok http 5678
+   ```
+   ngrok will print a public URL like `https://abc123.ngrok-free.app`.
+
+3. **Construct your webhook URL:**
+
+   | n8n Mode | URL to use in Lumina |
+   |---|---|
+   | Testing (Listen for test event) | `https://<your-id>.ngrok-free.app/webhook-test/rag-scraper` |
+   | Production (Workflow activated) | `https://<your-id>.ngrok-free.app/webhook/rag-scraper` |
+
+4. **Paste that URL** into the **n8n Webhook URL** field when adding a source in Lumina.
+
+> **Note:** On the free ngrok plan, the public URL changes every time you restart ngrok. Update the source URL in Lumina each session, or upgrade to a paid plan for a static domain.
+
+### Writing Your Own n8n Workflow
+
+Your n8n workflow must satisfy these requirements for Lumina to ingest it successfully:
+
+- **Trigger**: A `Webhook` node configured with `POST` method and `responseMode: responseNode`
+- **Response**: A `Respond to Webhook` node that returns a JSON body containing at least one of:
+  - `text` — plain text or markdown string
+  - `content` — string (or a JSON object/array, which Lumina will auto-serialize)
+  - `markdown` — markdown string
+- **Avoid**: Returning empty responses or HTML. If a step can fail (e.g. scraping a website), add error handling to ensure the workflow always reaches the Respond node.
+
