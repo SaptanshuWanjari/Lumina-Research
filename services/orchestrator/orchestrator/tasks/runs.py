@@ -60,6 +60,27 @@ def _current_step(store: SupabaseRunStore, run_id: str, owner_user_id: str, fall
     return current_step if isinstance(current_step, str) and current_step else fallback
 
 
+def _format_error(exc: Exception) -> str:
+    msg = str(exc)
+    msg_lower = msg.lower()
+    
+    # 429 Rate limits / Quota
+    if "429" in msg_lower or "rate limit" in msg_lower or "quota" in msg_lower or "too many requests" in msg_lower:
+        if "quota" in msg_lower or "insufficient_quota" in msg_lower:
+            return "Your AI provider account has run out of quota or credits. Please check your billing dashboard and add funds if necessary."
+        return "The AI provider is currently rate limiting our requests. Please wait a few moments and try again."
+        
+    # 401 / 403 API Key issues
+    if "401" in msg_lower or "403" in msg_lower or "api key" in msg_lower or "unauthorized" in msg_lower:
+        return "The provided API key is invalid or lacks the necessary permissions. Please update your AI settings with a valid key."
+        
+    # 500 / 503 Provider issues
+    if "500" in msg_lower or "503" in msg_lower or "internal server error" in msg_lower or "service unavailable" in msg_lower:
+        return "The AI provider's servers are currently experiencing issues or are overloaded. Please try again later."
+        
+    return f"An unexpected error occurred: {msg}"
+
+
 @celery_app.task(name="orchestrator.tasks.runs.start_run", bind=True)
 def start_run(self, run_id: str) -> dict[str, str]:
     return _start_run(run_id)
@@ -111,14 +132,15 @@ def _start_run(run_id: str) -> dict[str, str]:
         return {"run_id": run_id, "status": "needs_review"}
     except Exception as exc:
         failed_step = _current_step(store, run_id, owner_user_id, "deep_research")
-        store.fail_step(run_id, owner_user_id, failed_step, str(exc))
+        error_msg = _format_error(exc)
+        store.fail_step(run_id, owner_user_id, failed_step, error_msg)
         store.update_run(
             run_id,
             owner_user_id,
             {
                 "status": "failed",
                 "needs_review": False,
-                "error_message": str(exc),
+                "error_message": error_msg,
                 "checkpoint_ref": run_id,
                 "checkpoint_at": utcnow_iso(),
             },
@@ -177,7 +199,8 @@ def _retry_run(run_id: str) -> dict[str, str]:
         return {"run_id": run_id, "status": "needs_review"}
     except Exception as exc:
         failed_step = _current_step(store, run_id, owner_user_id, entry_point)
-        store.fail_step(run_id, owner_user_id, failed_step, str(exc))
+        error_msg = _format_error(exc)
+        store.fail_step(run_id, owner_user_id, failed_step, error_msg)
         store.update_run(
             run_id,
             owner_user_id,
@@ -185,7 +208,7 @@ def _retry_run(run_id: str) -> dict[str, str]:
                 "status": "failed",
                 "needs_review": False,
                 "current_step": entry_point,
-                "error_message": str(exc),
+                "error_message": error_msg,
                 "checkpoint_ref": run_id,
                 "checkpoint_at": utcnow_iso(),
             },
@@ -253,14 +276,15 @@ def _resume_run(run_id: str) -> dict[str, str]:
         return {"run_id": run_id, "status": "complete"}
     except Exception as exc:
         failed_step = _current_step(store, run_id, owner_user_id, "publish")
-        store.fail_step(run_id, owner_user_id, failed_step, str(exc))
+        error_msg = _format_error(exc)
+        store.fail_step(run_id, owner_user_id, failed_step, error_msg)
         store.update_run(
             run_id,
             owner_user_id,
             {
                 "status": "failed",
                 "needs_review": False,
-                "error_message": str(exc),
+                "error_message": error_msg,
                 "checkpoint_ref": run_id,
                 "checkpoint_at": utcnow_iso(),
             },
