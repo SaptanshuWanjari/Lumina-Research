@@ -86,6 +86,7 @@ services:
       LANGSMITH_API_KEY:
       LANGSMITH_PROJECT: ${WORKER_LANGSMITH_PROJECT:-lumina-research-worker}
       LANGSMITH_ENDPOINT: ${LANGSMITH_ENDPOINT:-https://api.smith.langchain.com}
+      N8N_LOCALHOST_REWRITE_HOST: ${N8N_LOCALHOST_REWRITE_HOST:-host.docker.internal}
     extra_hosts:
       - "host.docker.internal:host-gateway"
 

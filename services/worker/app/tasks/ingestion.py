@@ -325,19 +325,38 @@ def _process_source(source_id: str) -> dict[str, Any]:
         raise
 
 
+def _rewrite_localhost_url(url: str) -> str:
+    """
+    Rewrites localhost/127.0.0.1 in a URL to the configured rewrite host
+    (e.g. host.docker.internal for local Docker). Raises clearly if the URL
+    is local but no rewrite host is configured (e.g. running on Cloud Run).
+    """
+    import urllib.parse
+    parsed = urllib.parse.urlparse(url)
+    if parsed.hostname not in ("localhost", "127.0.0.1"):
+        return url
+
+    rewrite_host = settings.N8N_LOCALHOST_REWRITE_HOST.strip()
+    if not rewrite_host:
+        raise RuntimeError(
+            f"Webhook URL '{url}' points to localhost, which is not reachable from this "
+            "environment. Use a publicly accessible URL (e.g. via ngrok or a deployed n8n instance). "
+            "If running locally with Docker Compose, set N8N_LOCALHOST_REWRITE_HOST=host.docker.internal "
+            "in the worker environment."
+        )
+    new_netloc = parsed.netloc.replace(parsed.hostname, rewrite_host, 1)
+    return parsed._replace(netloc=new_netloc).geturl()
+
+
 def _load_source_text(
     store: IngestionStore, source: dict[str, Any]
 ) -> tuple[str, str, str | None]:
     source_type = source.get("source_type")
-    
+
     if source_type in ("url", "n8n"):
         url = source.get("url")
         if url:
-            import urllib.parse
-            parsed_url = urllib.parse.urlparse(url)
-            if parsed_url.hostname in ("localhost", "127.0.0.1"):
-                new_netloc = parsed_url.netloc.replace(parsed_url.hostname, "host.docker.internal", 1)
-                source["url"] = parsed_url._replace(netloc=new_netloc).geturl()
+            source["url"] = _rewrite_localhost_url(url)
 
     if source_type == "note":
         return normalize_text(source.get("note_text") or ""), "note", "text/plain"
@@ -353,12 +372,21 @@ def _load_source_text(
 
         payload = {"case_id": source.get("case_id"), "source_id": source.get("id")}
         try:
-            resp = httpx.post(url, json=payload, timeout=60.0)
+            # Bypass ngrok interstitial warning page
+            headers = {"ngrok-skip-browser-warning": "true"}
+            resp = httpx.post(url, json=payload, headers=headers, timeout=60.0)
             resp.raise_for_status()
             data = resp.json()
             text = data.get("text") or data.get("content") or data.get("markdown")
             if not text:
                 raise RuntimeError("n8n webhook response missing text, content, or markdown field")
+            
+            # If the response field is a dict or list (like a custom structured JSON response),
+            # serialize it to a JSON string so it can be ingested and chunked correctly.
+            if not isinstance(text, str):
+                import json
+                text = json.dumps(text, ensure_ascii=False, indent=2)
+
             return normalize_text(text), "n8n", "text/plain"
         except httpx.HTTPError as exc:
             raise RuntimeError(f"n8n webhook request failed: {exc}")

@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     WORKER_HTTP_TIMEOUT_SECONDS: float = Field(default=20.0, gt=0)
     WORKER_MAX_URL_BYTES: int = Field(default=5_000_000, gt=0)
 
+    # When set, rewrites localhost/127.0.0.1 in webhook URLs to this hostname.
+    # Use "host.docker.internal" for local Docker Compose environments only.
+    # Must be left UNSET (empty) on Cloud Run and other cloud platforms.
+    N8N_LOCALHOST_REWRITE_HOST: str = ""
+
     LANGSMITH_TRACING: bool = False
     LANGSMITH_API_KEY: str = ""
     LANGSMITH_PROJECT: str = "lumina-research-worker"

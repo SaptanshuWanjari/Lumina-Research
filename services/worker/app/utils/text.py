@@ -29,6 +29,7 @@ _BROWSER_HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
     "Cache-Control": "no-cache",
     "Pragma": "no-cache",
+    "ngrok-skip-browser-warning": "true",
 }
 
 _BOILERPLATE_TAGS = {
