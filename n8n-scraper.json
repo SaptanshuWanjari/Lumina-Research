@@ -1,0 +1,200 @@
+{
+  "name": "RAG Knowledge Scraper",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "rag-scraper",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "9a95ec73-3875-4202-b255-b9c2cc526699",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-48, 432],
+      "webhookId": "2e898b1b-c13a-4a9c-9559-3b3ef32a88a6"
+    },
+    {
+      "parameters": {
+        "url": "https://en.wikipedia.org/api/rest_v1/page/summary/Retrieval-augmented_generation",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "LuminaResearch/1.0 (https://github.com/lumina-research)"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "73876e71-3055-4aba-ac47-10fa16dd8f9d",
+      "name": "Wikipedia: RAG",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [176, 240]
+    },
+    {
+      "parameters": {
+        "url": "https://en.wikipedia.org/api/rest_v1/page/summary/Large_language_model",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "LuminaResearch/1.0 (https://github.com/lumina-research)"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a01c65c7-d4c7-4d90-a5e7-e51fa72bd963",
+      "name": "Wikipedia: LLM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [176, 432]
+    },
+    {
+      "parameters": {
+        "url": "https://en.wikipedia.org/api/rest_v1/page/summary/Vector_database",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "LuminaResearch/1.0 (https://github.com/lumina-research)"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2f02d667-82e7-43d9-a5c6-a1f64f2bc0b1",
+      "name": "Wikipedia: Vector Database",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [176, 624]
+    },
+    {
+      "parameters": {},
+      "id": "a71d6eb8-1c6f-463e-bbcd-1b6f53a1675c",
+      "name": "Merge Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [400, 336]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nfunction formatArticle(item) {\n  const data = item.json;\n  const title = data.title || 'Unknown';\n  const description = data.description || '';\n  const extract = data.extract || '';\n  const url = (data.content_urls && data.content_urls.desktop && data.content_urls.desktop.page) || '';\n  return `## ${title}\\n${description ? `*${description}*\\n` : ''}\\n${extract}\\n\\nSource: ${url}`;\n}\n\nconst sections = items.map(formatArticle);\nconst combinedText = sections.join('\\n\\n---\\n\\n');\n\nreturn [{\n  json: {\n    text: combinedText,\n    sources: items.map(i => (i.json.content_urls && i.json.content_urls.desktop && i.json.content_urls.desktop.page) || ''),\n    article_count: items.length\n  }\n}];"
+      },
+      "id": "07b35d81-e47b-481a-a806-29f814480c0a",
+      "name": "Combine Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [624, 336]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "71046ff9-a01f-4b70-9029-86a920f8cfde",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [848, 336]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Wikipedia: RAG",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Wikipedia: LLM",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Wikipedia: Vector Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wikipedia: RAG": {
+      "main": [
+        [
+          {
+            "node": "Merge Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wikipedia: LLM": {
+      "main": [
+        [
+          {
+            "node": "Merge Results",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Results": {
+      "main": [
+        [
+          {
+            "node": "Combine Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Text": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "dde65494-1d71-497f-b62e-f374ff0b6518",
+  "meta": {
+    "instanceId": "2b4cd9c5c378c1041fd759a5f8d4ed396ce6fad6e7bf5f134d7da561ff12b0b5"
+  },
+  "id": "jqKSIkzaRVHGpEMp",
+  "tags": []
+}
