@@ -17,8 +17,6 @@ class Settings(BaseSettings):
     ORCHESTRATOR_QUEUE_NAME: str = "orchestrator"
 
     AI_SETTINGS_ENCRYPTION_KEY: str = ""
-    OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
-    OLLAMA_DEFAULT_MODEL: str = "llama3.2"
     GOOGLE_API_KEY: str = ""
     GROQ_DEFAULT_MODEL: str = "llama-3.3-70b-versatile"
     GEMINI_PLANNER_MODEL: str = "gemini-2.5-flash-lite"

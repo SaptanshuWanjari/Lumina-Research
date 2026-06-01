@@ -75,40 +75,10 @@ class GroqService:
         return json.loads(match.group(0))
 
 
-class OllamaService:
-    def __init__(self, model_name: str):
-        try:
-            from langchain_ollama import ChatOllama
-        except ImportError as exc:
-            raise RuntimeError(
-                "langchain-ollama is required for Ollama orchestration"
-            ) from exc
-        self.model = ChatOllama(
-            model=model_name,
-            base_url=settings.OLLAMA_BASE_URL,
-            temperature=0.2,
-        )
-
-    def invoke_text(self, system: str, user: str) -> str:
-        response = self.model.invoke(
-            [SystemMessage(content=system), HumanMessage(content=user)]
-        )
-        content = getattr(response, "content", "")
-        return content if isinstance(content, str) else json.dumps(content)
-
-    def invoke_json(self, system: str, user: str) -> dict[str, Any]:
-        text = self.invoke_text(system, user)
-        match = re.search(r"\{.*\}", text, flags=re.DOTALL)
-        if not match:
-            raise RuntimeError(f"Gemini did not return JSON: {text[:300]}")
-        return json.loads(match.group(0))
-
 
 def _fallback_model(role: str, provider: str) -> str:
     if provider == "groq":
         return settings.GROQ_DEFAULT_MODEL
-    if provider == "ollama":
-        return settings.OLLAMA_DEFAULT_MODEL
     if role == "planner":
         return settings.GEMINI_PLANNER_MODEL
     if role == "analyzer":
@@ -119,14 +89,12 @@ def _fallback_model(role: str, provider: str) -> str:
 def _resolve_llm_config(owner_user_id: str, role: str) -> ResolvedLlmConfig:
     configured = SupabaseRunStore(get_supabase()).get_ai_settings(owner_user_id) or {}
     provider = str(configured.get("provider") or "gemini").strip().lower()
-    if provider not in {"gemini", "ollama", "groq"}:
+    if provider not in {"gemini", "groq"}:
         provider = "gemini"
 
     model_name = str(configured.get("model") or "").strip() or _fallback_model(
         role, provider
     )
-    if provider == "ollama":
-        return ResolvedLlmConfig(provider=provider, model_name=model_name)
 
     encrypted_api_key = str(configured.get("encrypted_api_key") or "").strip()
     api_key = decrypt_secret(encrypted_api_key) if encrypted_api_key else ""
@@ -139,10 +107,8 @@ def _resolve_llm_config(owner_user_id: str, role: str) -> ResolvedLlmConfig:
 
 def _build_llm(
     owner_user_id: str, role: str
-) -> GeminiService | GroqService | OllamaService:
+) -> GeminiService | GroqService:
     config = _resolve_llm_config(owner_user_id, role)
-    if config.provider == "ollama":
-        return OllamaService(config.model_name)
     if config.provider == "groq":
         return GroqService(config.model_name, config.api_key or "")
     return GeminiService(config.model_name, config.api_key or "")
@@ -152,13 +118,13 @@ def chat_model(owner_user_id: str, role: str = "analyzer") -> Any:
     return _build_llm(owner_user_id, role).model
 
 
-def planner_llm(owner_user_id: str) -> GeminiService | GroqService | OllamaService:
+def planner_llm(owner_user_id: str) -> GeminiService | GroqService:
     return _build_llm(owner_user_id, "planner")
 
 
-def analyzer_llm(owner_user_id: str) -> GeminiService | GroqService | OllamaService:
+def analyzer_llm(owner_user_id: str) -> GeminiService | GroqService:
     return _build_llm(owner_user_id, "analyzer")
 
 
-def writer_llm(owner_user_id: str) -> GeminiService | GroqService | OllamaService:
+def writer_llm(owner_user_id: str) -> GeminiService | GroqService:
     return _build_llm(owner_user_id, "writer")

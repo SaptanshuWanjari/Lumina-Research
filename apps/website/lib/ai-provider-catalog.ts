@@ -22,14 +22,6 @@ export const AI_PROVIDER_CATALOG = {
     description: "Groq-hosted models optimized for fast inference.",
     models: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "gemma2-9b-it"],
   },
-  ollama: {
-    label: "Ollama",
-    requiresApiKey: false,
-    apiKeyLabel: "API Key",
-    apiKeyPlaceholder: "",
-    description: "Local models served through your Ollama runtime.",
-    models: ["llama3.2", "llama3.1", "qwen3:8b", "mistral"],
-  },
 } as const;
 
 export type AiProvider = keyof typeof AI_PROVIDER_CATALOG;
