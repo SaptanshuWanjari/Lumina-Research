@@ -116,8 +116,33 @@ function renderStringList(items: unknown) {
 
 function renderResearchPlan(payload: Record<string, JsonValue>) {
   return (
-    <div className="space-y-3">
-      {renderStringList(payload.research_plan)}
+    <div className="space-y-4">
+      {payload.research_plan ? (
+        <section>
+          {renderStringList(payload.research_plan)}
+        </section>
+      ) : null}
+      {payload.critique_notes ? (
+        <section>
+          <p className="text-xs font-semibold tracking-[0.16em] text-slate-500">CRITIQUE NOTES</p>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+            {String(payload.critique_notes)}
+          </p>
+        </section>
+      ) : null}
+      {payload.meta ? (
+        <section>
+          <p className="text-xs font-semibold tracking-[0.16em] text-slate-500">META</p>
+          <pre className="mt-2 overflow-x-auto whitespace-pre-wrap text-xs leading-6 text-slate-600">
+            {JSON.stringify(payload.meta, null, 2)}
+          </pre>
+        </section>
+      ) : null}
+      {!payload.research_plan && !payload.critique_notes && !payload.meta ? (
+        <pre className="mt-2 overflow-x-auto whitespace-pre-wrap text-xs leading-6 text-slate-600">
+          {JSON.stringify(payload, null, 2)}
+        </pre>
+      ) : null}
     </div>
   );
 }
@@ -145,11 +170,6 @@ function renderRetrievalSet(payload: Record<string, JsonValue>) {
               Score {formatScore(chunk.score)}
             </span>
           </div>
-          <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">
-            {typeof chunk.content === "string"
-              ? chunk.content
-              : "No content excerpt stored."}
-          </p>
         </article>
       ))}
     </div>
@@ -174,17 +194,7 @@ function renderRetrievalEntries(chunks: Record<string, JsonValue>[]) {
           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
             Score {formatScore(chunk.score)}
           </span>
-          {typeof chunk.citation_label === "string" ? (
-            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs text-emerald-700">
-              {chunk.citation_label}
-            </span>
-          ) : null}
         </div>
-        <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-700">
-          {typeof chunk.content === "string"
-            ? chunk.content
-            : "No content excerpt stored."}
-        </p>
       </article>
     );
   }
@@ -216,17 +226,7 @@ function renderRetrievalEntries(chunks: Record<string, JsonValue>[]) {
               <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
                 Score {formatScore(chunk.score)}
               </span>
-              {typeof chunk.citation_label === "string" ? (
-                <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs text-emerald-700">
-                  {chunk.citation_label}
-                </span>
-              ) : null}
             </div>
-            <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-700">
-              {typeof chunk.content === "string"
-                ? chunk.content
-                : "No content excerpt stored."}
-            </p>
             <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-500">
               {typeof chunk.source_id === "string" ? (
                 <span>Source {chunk.source_id}</span>
@@ -278,40 +278,6 @@ function renderDraftReport(payload: Record<string, JsonValue>) {
           <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
             {payload.summary}
           </p>
-        </section>
-      ) : null}
-      {citations ? (
-        <section className="rounded-xl bg-white p-4 ring-1 ring-slate-200">
-          <p className="text-xs font-semibold tracking-[0.16em] text-slate-500">
-            Citations
-          </p>
-          <div className="mt-3 space-y-3">
-            {Object.entries(citations).map(([topic, refs]) => {
-              const values = Array.isArray(refs)
-                ? refs.filter((item): item is string => typeof item === "string")
-                : [];
-
-              return (
-                <article key={topic} className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                  <p className="font-semibold text-slate-900">{topic}</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {values.length > 0 ? (
-                      values.map((reference) => (
-                        <span
-                          key={reference}
-                          className="rounded-full bg-white px-3 py-1 text-xs text-slate-700 ring-1 ring-slate-200"
-                        >
-                          {reference}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-sm text-slate-500">No citations listed.</span>
-                    )}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
         </section>
       ) : null}
     </div>

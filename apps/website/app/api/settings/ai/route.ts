@@ -48,7 +48,6 @@ export async function PUT(request: NextRequest) {
         ? body.reuseApiKeyForEmbeddings
         : undefined;
 
-    // Fetch stored settings for just this provider.
     const all = await getAllAiSettings();
     const current = all.providers[provider] ?? {
       provider,
@@ -57,12 +56,10 @@ export async function PUT(request: NextRequest) {
       apiKeyLastFour: null,
       hasStoredEmbeddingsApiKey: false,
       embeddingsApiKeyLastFour: null,
-      // Groq always requires a separate Gemini embeddings key — never reuse.
       reuseApiKeyForEmbeddings: provider === "gemini",
       updatedAt: null,
     };
 
-    // --- Provider key validation ---
     const requiresProviderKey =
       AI_PROVIDER_CATALOG[provider as keyof typeof AI_PROVIDER_CATALOG].requiresApiKey;
     const hasProviderKey = Boolean(apiKey) || current.hasStoredApiKey;
@@ -98,8 +95,6 @@ export async function PUT(request: NextRequest) {
         );
       }
     } else {
-      // Case 2 – Gemini + separate embeddings key, OR Case 3 – Groq.
-      // A distinct Gemini embeddings key must be present (stored or being provided now).
       const clearsEmbeddingsKey = clearEmbeddingsApiKey && !embeddingsApiKey;
       const hasEmbeddingsKey =
         Boolean(embeddingsApiKey) ||
@@ -133,7 +128,6 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-/** Extract a human-readable message from any thrown value (Error or Supabase PostgRESTError). */
 function toMessage(error: unknown, fallback: string): string {
   if (!error) return fallback;
   if (typeof error === "string") return error;

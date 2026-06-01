@@ -92,23 +92,6 @@ export type ReportSummary = {
   updatedAt: string;
 };
 
-export type ReportClaimSummary = {
-  id: string;
-  claimIndex: number;
-  section: string | null;
-  claimText: string;
-  supportScore: number | null;
-};
-
-export type ReportCitationSummary = {
-  id: string;
-  citationLabel: string | null;
-  excerpt: string | null;
-  confidence: number | null;
-  sourceId: string;
-  sourceTitle: string;
-  chunkId: string | null;
-};
 
 export type SourceChunkSummary = {
   id: string;
@@ -153,8 +136,6 @@ export type RunDetail = {
 export type ReportDetail = {
   report: ReportSummary;
   caseItem: CaseSummary;
-  claims: ReportClaimSummary[];
-  citations: ReportCitationSummary[];
 };
 
 export type DashboardData = {
@@ -344,41 +325,6 @@ function mapArtifact(row: Record<string, unknown>): RunArtifactSummary {
   };
 }
 
-function mapClaim(row: Record<string, unknown>): ReportClaimSummary {
-  return {
-    id: String(row.id ?? ""),
-    claimIndex: Number(row.claim_index ?? 0),
-    section: stringValue(row.section),
-    claimText: String(row.claim_text ?? ""),
-    supportScore:
-      typeof row.support_score === "number"
-        ? row.support_score
-        : row.support_score
-          ? Number(row.support_score)
-          : null,
-  };
-}
-
-function mapCitation(row: Record<string, unknown>): ReportCitationSummary {
-  const source =
-    typeof row.source === "object" && row.source !== null
-      ? (row.source as Record<string, unknown>)
-      : {};
-  return {
-    id: String(row.id ?? ""),
-    citationLabel: stringValue(row.citation_label),
-    excerpt: stringValue(row.excerpt),
-    confidence:
-      typeof row.confidence === "number"
-        ? row.confidence
-        : row.confidence
-          ? Number(row.confidence)
-          : null,
-    sourceId: String(row.source_id ?? ""),
-    sourceTitle: formatSourceTitle(source),
-    chunkId: stringValue(row.chunk_id),
-  };
-}
 
 function mapChunk(row: Record<string, unknown>): SourceChunkSummary {
   return {
@@ -673,7 +619,7 @@ export async function getReportDetail(reportId: string): Promise<ReportDetail | 
   if (!reportResp.data) return null;
 
   const report = mapReport(reportResp.data as Record<string, unknown>);
-  const [caseResp, claimsResp, citationsResp] = await Promise.all([
+  const [caseResp] = await Promise.all([
     supabase
       .from("cases")
       .select(
@@ -682,36 +628,14 @@ export async function getReportDetail(reportId: string): Promise<ReportDetail | 
       .eq("id", report.caseId)
       .eq("owner_user_id", user.id)
       .maybeSingle(),
-    supabase
-      .from("report_claims")
-      .select("id,claim_index,section,claim_text,support_score")
-      .eq("report_version_id", reportId)
-      .eq("owner_user_id", user.id)
-      .order("claim_index", { ascending: true }),
-    supabase
-      .from("report_citations")
-      .select(
-        "id,citation_label,excerpt,confidence,source_id,chunk_id,source:sources(id,title,url,note_text,metadata_json)",
-      )
-      .eq("report_version_id", reportId)
-      .eq("owner_user_id", user.id)
-      .order("created_at", { ascending: true }),
   ]);
 
   if (caseResp.error) throw caseResp.error;
   if (!caseResp.data) return null;
-  if (claimsResp.error) throw claimsResp.error;
-  if (citationsResp.error) throw citationsResp.error;
 
   return {
     report,
     caseItem: mapCase(caseResp.data as Record<string, unknown>),
-    claims: (claimsResp.data ?? []).map((row) =>
-      mapClaim(row as Record<string, unknown>),
-    ),
-    citations: (citationsResp.data ?? []).map((row) =>
-      mapCitation(row as Record<string, unknown>),
-    ),
   };
 }
 
