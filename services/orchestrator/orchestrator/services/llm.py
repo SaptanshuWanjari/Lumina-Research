@@ -48,17 +48,81 @@ class GeminiService:
         return json.loads(match.group(0))
 
 
+def _repair_write_todos_args(message: Any) -> Any:
+    from langchain_core.messages import AIMessage
+
+    if not isinstance(message, AIMessage) or not message.tool_calls:
+        return message
+
+    fixed = []
+    changed = False
+    for tc in message.tool_calls:
+        if tc.get("name") == "write_todos":
+            args = tc.get("args", {})
+            if isinstance(args, list):
+                tc = {**tc, "args": {"todos": args}}
+                changed = True
+            elif isinstance(args, dict) and "todos" not in args:
+                values = list(args.values())
+                if len(values) == 1 and isinstance(values[0], list):
+                    tc = {**tc, "args": {"todos": values[0]}}
+                    changed = True
+        fixed.append(tc)
+
+    if not changed:
+        return message
+    return message.model_copy(update={"tool_calls": fixed})
+
+
+def _make_groq_subclass() -> type:
+    from langchain_groq import ChatGroq
+
+    class _ChatGroqFixed(ChatGroq):
+        def _postprocess(self, result: Any) -> Any:
+            from langchain_core.messages import AIMessage
+            from langchain_core.outputs import ChatGeneration, ChatResult
+
+            if isinstance(result, ChatResult):
+                repaired_generations = []
+                for gen in result.generations:
+                    if isinstance(gen, ChatGeneration) and isinstance(
+                        gen.message, AIMessage
+                    ):
+                        repaired_msg = _repair_write_todos_args(gen.message)
+                        if repaired_msg is not gen.message:
+                            gen = ChatGeneration(
+                                message=repaired_msg,
+                                generation_info=gen.generation_info,
+                                text=gen.text,
+                            )
+                    repaired_generations.append(gen)
+                result = ChatResult(
+                    generations=repaired_generations,
+                    llm_output=result.llm_output,
+                )
+            return result
+
+        def _generate(self, *args: Any, **kwargs: Any) -> Any:
+            return self._postprocess(super()._generate(*args, **kwargs))
+
+        async def _agenerate(self, *args: Any, **kwargs: Any) -> Any:
+            return self._postprocess(await super()._agenerate(*args, **kwargs))
+
+    return _ChatGroqFixed
+
+
 class GroqService:
     def __init__(self, model_name: str, api_key: str):
         try:
-            from langchain_groq import ChatGroq
+            _ChatGroqFixed = _make_groq_subclass()
         except ImportError as exc:
             raise RuntimeError("langchain-groq is required for Groq orchestration") from exc
-        self.model = ChatGroq(
+        self.model = _ChatGroqFixed(
             model=model_name,
             api_key=api_key,
             temperature=0.2,
         )
+        self._raw_model = self.model
 
     def invoke_text(self, system: str, user: str) -> str:
         response = self.model.invoke(

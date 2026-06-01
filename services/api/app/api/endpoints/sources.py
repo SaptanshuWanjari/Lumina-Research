@@ -11,6 +11,7 @@ from fastapi import (
     Form,
     status,
 )
+from fastapi.responses import JSONResponse
 from supabase import Client
 from pydantic import ValidationError
 
@@ -21,6 +22,7 @@ from app.core.database import (
     select_many_by_owner_and_case,
     select_one_by_owner_and_case,
     update_by_owner,
+    _response_data,
 )
 from app.core.security import get_current_user, TokenPayload
 from app.schemas.sources import Source, SourceCreate
@@ -171,9 +173,43 @@ async def create_source(
             }
         )
 
+  
+    content_hash = insert_data.get("content_hash")
+    if content_hash:
+        existing_response = (
+            supabase.table("sources")
+            .select("*")
+            .eq("case_id", case_id)
+            .eq("content_hash", content_hash)
+            .eq("owner_user_id", current_user.sub)
+            .limit(1)
+            .execute()
+        )
+        existing_rows = _response_data(existing_response)
+        if existing_rows:
+            return JSONResponse(content=existing_rows[0], status_code=200)
+
     try:
         record = insert_row(supabase, "sources", insert_data)
     except Exception as exc:
+        exc_str = str(exc)
+        if "23505" in exc_str or "uq_sources_case_content_hash" in exc_str:
+            fallback_response = (
+                supabase.table("sources")
+                .select("*")
+                .eq("case_id", case_id)
+                .eq("content_hash", insert_data.get("content_hash"))
+                .eq("owner_user_id", current_user.sub)
+                .limit(1)
+                .execute()
+            )
+            fallback_rows = _response_data(fallback_response)
+            if fallback_rows:
+                return JSONResponse(content=fallback_rows[0], status_code=200)
+            raise HTTPException(
+                status_code=409,
+                detail="A source with this content already exists in this case.",
+            ) from exc
         raise HTTPException(
             status_code=500,
             detail=f"Failed to create source record: {exc}",

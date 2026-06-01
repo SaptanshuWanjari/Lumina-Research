@@ -3,7 +3,7 @@
 
 CREATE TABLE public.ai_settings (
   owner_user_id uuid NOT NULL,
-  provider text NOT NULL CHECK (provider = ANY (ARRAY['gemini'::text, 'ollama'::text, 'groq'::text])),
+  provider text NOT NULL CHECK (provider = ANY (ARRAY['gemini'::text, 'groq'::text])),
   model text NOT NULL,
   encrypted_api_key text,
   api_key_last_four text,
@@ -12,7 +12,7 @@ CREATE TABLE public.ai_settings (
   encrypted_embeddings_api_key text,
   embeddings_api_key_last_four text,
   reuse_api_key_for_embeddings boolean NOT NULL DEFAULT true,
-  CONSTRAINT ai_settings_pkey PRIMARY KEY (owner_user_id),
+  CONSTRAINT ai_settings_pkey PRIMARY KEY (owner_user_id, provider),
   CONSTRAINT ai_settings_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.profiles(user_id)
 );
 CREATE TABLE public.audit_logs (
