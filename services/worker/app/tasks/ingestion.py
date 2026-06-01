@@ -377,14 +377,22 @@ def _load_source_text(
 
         payload = {"case_id": source.get("case_id"), "source_id": source.get("id")}
         try:
-            resp = httpx.post(url, json=payload, timeout=60.0)
+            headers = {"ngrok-skip-browser-warning": "true"}
+            resp = httpx.post(url, json=payload, headers=headers, timeout=60.0)
             resp.raise_for_status()
+            
+            if not resp.text.strip():
+                raise RuntimeError("n8n webhook returned an empty response. Make sure the workflow is active and reaches the 'Respond to Webhook' node.")
+            
             data = resp.json()
             text = data.get("text") or data.get("content") or data.get("markdown")
             if not text:
-                raise RuntimeError(
-                    "n8n webhook response missing text, content, or markdown field"
-                )
+                raise RuntimeError("n8n webhook response missing text, content, or markdown field")
+                
+            if not isinstance(text, str):
+                import json
+                text = json.dumps(text, ensure_ascii=False, indent=2)
+                
             return normalize_text(text), "n8n", "text/plain"
         except httpx.HTTPError as exc:
             raise RuntimeError(f"n8n webhook request failed: {exc}")
