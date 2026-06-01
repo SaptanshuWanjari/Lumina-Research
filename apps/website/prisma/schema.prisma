@@ -154,8 +154,6 @@ model Profile {
   runArtifacts           RunArtifact[]      @relation("RunArtifactOwner")
   reportVersions         ReportVersion[]    @relation("ReportVersionOwner")
   reportVersionsAuthored ReportVersion[]    @relation("ReportVersionCreatedBy")
-  reportClaims           ReportClaim[]      @relation("ReportClaimOwner")
-  reportCitations        ReportCitation[]   @relation("ReportCitationOwner")
   ingestionAttempts      IngestionAttempt[] @relation("IngestionAttemptOwner")
   jobs                   Job[]              @relation("JobOwner")
   auditLogsOwned         AuditLog[]         @relation("AuditLogOwner")
@@ -235,7 +233,6 @@ model Source {
   case              Case               @relation(fields: [caseId], references: [id], onDelete: Cascade)
   owner             Profile            @relation("SourceOwner", fields: [ownerUserId], references: [userId], onDelete: Cascade)
   documents         Document[]
-  reportCitations   ReportCitation[]
   ingestionAttempts IngestionAttempt[]
   jobs              Job[]
 
@@ -266,7 +263,6 @@ model Document {
   case            Case             @relation(fields: [caseId], references: [id], onDelete: Cascade)
   owner           Profile          @relation("DocumentOwner", fields: [ownerUserId], references: [userId], onDelete: Cascade)
   chunks          Chunk[]
-  reportCitations ReportCitation[]
 
   @@unique([sourceId, version], map: "uq_documents_source_version")
   @@index([caseId, createdAt(sort: Desc)], map: "idx_documents_case_created_desc")
@@ -289,7 +285,6 @@ model Chunk {
   document        Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
   case            Case             @relation(fields: [caseId], references: [id], onDelete: Cascade)
   owner           Profile          @relation("ChunkOwner", fields: [ownerUserId], references: [userId], onDelete: Cascade)
-  reportCitations ReportCitation[]
 
   @@unique([documentId, chunkIndex], map: "uq_chunks_document_chunk_index")
   @@index([caseId], map: "idx_chunks_case")
@@ -388,7 +383,6 @@ model ReportVersion {
   title           String?
   summary         String?             @db.Text
   contentMarkdown String?             @map("content_markdown") @db.Text
-  citationsJson   Json?               @map("citations_json")
   createdByUserId String?             @map("created_by_user_id") @db.Uuid
   publishedAt     DateTime?           @map("published_at") @db.Timestamptz(6)
   createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -399,8 +393,6 @@ model ReportVersion {
   run       Run?             @relation(fields: [runId], references: [id], onDelete: SetNull)
   owner     Profile          @relation("ReportVersionOwner", fields: [ownerUserId], references: [userId], onDelete: Cascade)
   createdBy Profile?         @relation("ReportVersionCreatedBy", fields: [createdByUserId], references: [userId], onDelete: SetNull)
-  claims    ReportClaim[]
-  citations ReportCitation[]
 
   @@unique([caseId, versionNumber], map: "uq_report_versions_case_version_number")
   @@index([caseId, status, createdAt(sort: Desc)], map: "idx_report_versions_case_status_created_desc")
@@ -409,52 +401,6 @@ model ReportVersion {
   @@map("report_versions")
 }
 
-model ReportClaim {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  reportVersionId String   @map("report_version_id") @db.Uuid
-  ownerUserId     String   @map("owner_user_id") @db.Uuid
-  claimIndex      Int      @map("claim_index")
-  section         String?
-  claimText       String   @map("claim_text") @db.Text
-  supportScore    Decimal? @map("support_score") @db.Decimal(5, 2)
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  reportVersion ReportVersion    @relation(fields: [reportVersionId], references: [id], onDelete: Cascade)
-  owner         Profile          @relation("ReportClaimOwner", fields: [ownerUserId], references: [userId], onDelete: Cascade)
-  citations     ReportCitation[]
-
-  @@unique([reportVersionId, claimIndex], map: "uq_report_claims_report_claim_index")
-  @@index([reportVersionId, section], map: "idx_report_claims_report_section")
-  @@map("report_claims")
-}
-
-model ReportCitation {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  reportVersionId String   @map("report_version_id") @db.Uuid
-  ownerUserId     String   @map("owner_user_id") @db.Uuid
-  claimId         String?  @map("claim_id") @db.Uuid
-  sourceId        String   @map("source_id") @db.Uuid
-  documentId      String?  @map("document_id") @db.Uuid
-  chunkId         String?  @map("chunk_id") @db.Uuid
-  citationLabel   String?  @map("citation_label")
-  excerpt         String?  @db.Text
-  locationJson    Json?    @map("location_json")
-  confidence      Decimal? @db.Decimal(5, 2)
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  reportVersion ReportVersion @relation(fields: [reportVersionId], references: [id], onDelete: Cascade)
-  owner         Profile       @relation("ReportCitationOwner", fields: [ownerUserId], references: [userId], onDelete: Cascade)
-  claim         ReportClaim?  @relation(fields: [claimId], references: [id], onDelete: SetNull)
-  source        Source        @relation(fields: [sourceId], references: [id], onDelete: Restrict)
-  document      Document?     @relation(fields: [documentId], references: [id], onDelete: SetNull)
-  chunk         Chunk?        @relation(fields: [chunkId], references: [id], onDelete: SetNull)
-
-  @@index([reportVersionId], map: "idx_report_citations_report_version")
-  @@index([sourceId], map: "idx_report_citations_source")
-  @@index([chunkId], map: "idx_report_citations_chunk")
-  @@map("report_citations")
-}
 
 model IngestionAttempt {
   id           String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
