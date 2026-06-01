@@ -73,16 +73,94 @@ The application is designed to be easily deployed on Google Cloud Run using cont
 
 ### Prerequisites
 
-- Node.js
-- Python and UV
-- Redis
+* **Docker and Docker Compose**
+* **Node.js 18+ & npm** (for frontend execution)
+* **Python 3.13+** (since services require `>=3.13`)
+* **uv** (modern, high-performance Python package and environment manager)
+* **Supabase CLI** (optional, for local DB migrations)
 
 ### Getting Started
 
-Using Docker Compose is the recommended way to run the entire stack locally:
+#### Using Docker Compose
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/SaptanshuWanjari/Lumina-Research.git
+   cd Lumina-Research
+   ```
 
-```bash
-docker compose -f infra/docker/docker-compose.yml up --build
-```
+2. **Configure environment secrets:**
+   Duplicate the env templates inside `infra/env/` to configure compose variables:
+
+   ```bash
+   cp infra/env/.env.example infra/env/.env
+   ```
+   Edit `infra/env/.env` to fill in Supabase credentials, DB connection, and keys.
+
+3. **Spin up the entire stack:**
+   ```bash
+   docker compose -f infra/docker/docker-compose.yml up --build
+   ```
 
 Ensure you have the necessary environment variables set up in the `infra/env/` directory based on the provided `.example` files.
+
+#### Local Dev (Without Docker Compose)
+If you wish to run services individually for faster hot-reloading:
+
+##### 1. Database Setup
+Deploy schema migrations to your PostgreSQL/Supabase instance:
+```bash
+cd supabase
+
+supabase migration up
+```
+
+##### 2. Backend (FastAPI)
+Synchronize the virtual environment and run the backend service:
+```bash
+cd services/api
+
+uv sync
+
+uv run uvicorn app.main:app --reload --port 8000
+```
+##### 3. Workers & Orchestrator (Separate Terminals)
+Synchronize and spin up the background worker queues:
+
+```bash
+cd services/worker
+
+uv sync
+
+uv run celery -A app.worker worker --loglevel=info
+```
+
+```bash
+cd services/orchestrator
+
+uv sync
+
+uv run celery -A app.orchestrator worker --loglevel=info
+```
+##### 4. Frontend
+Standard Node server execution:
+```bash
+cd apps/website
+
+npm install
+
+npm run dev
+```
+---
+
+### Environment Variables
+Copy `infra/env/.env.example` to `infra/env/.env` and fill in:
+
+| Variable | Description |
+|------------|------------|
+| DATABASE_URL | PostgreSQL connection string |
+| SUPABASE_URL | Supabase project URL |
+| SUPABASE_SERVICE_ROLE_KEY | Service role key |
+| CELERY_BROKER_URL | Redis broker URL |
+| GOOGLE_API_KEY | Gemini API key |
+| AI_SETTINGS_ENCRYPTION_KEY | Encryption key for stored provider credentials |
+| OLLAMA_BASE_URL | Ollama endpoint |
